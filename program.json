@@ -1,0 +1,10 @@
+{
+    "program": "game_2048.aleo",
+    "version": "0.0.0",
+    "description": "",
+    "development": {
+        "private_key": "APrivateKey1zkp5LLRbVWQCgqo3ScrUeuXZ4NY6VBZwwig1bdYrCxGTx8H",
+        "address": "aleo16gr2wku9592xnvs98t2qnuczkhc5jndx6dkrhctfxhmrzxygny8qkr02vd"
+    },
+    "license": "MIT"
+}
