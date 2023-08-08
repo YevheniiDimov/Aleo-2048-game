@@ -15,6 +15,13 @@ program game_2048.aleo {
         p3: Point,
     }
 
+    struct Buffer {
+        v0: u16,
+        v1: u16,
+        v2: u16,
+        v3: u16,
+    }
+
     // Board for the game consists of 4 rows
     // This way making a matrix of 4x4 tiles
     struct Board {
@@ -29,135 +36,167 @@ program game_2048.aleo {
     // the syntax by making the helper functions
     // (But they don't look nice either)
     //------------------------------------------------------------
-    function get_row_by_index(board: Board, index: u8) -> Row {
+    inline get_row_by_index(board: Board, index: u8) -> Row {
         if (index == 0u8) {
             return board.r0;
-        }
-        else if (index == 1u8) {
+        } else if (index == 1u8) {
             return board.r1;
-        }
-        else if (index == 2u8) {
+        } else if (index == 2u8) {
             return board.r2;
         }
         
         return board.r3;
     }
 
-    function get_point_by_index(row: Row, index: u8) -> Point {
+    inline get_point_by_index(row: Row, index: u8) -> Point {
         if (index == 0u8) {
             return row.p0;
-        }
-        else if (index == 1u8) {
+        } else if (index == 1u8) {
             return row.p1;
-        }
-        else if (index == 2u8) {
+        } else if (index == 2u8) {
             return row.p2;
         }
         
         return row.p3;
     }
 
-    function create_empty_board() -> Board {
+    inline create_empty_board() -> Board {
         return Board {
             r0: Row {p0: Point {x: 0u8, y: 0u8, value: 0u16}, p1: Point {x: 1u8, y: 0u8, value: 0u16}, p2: Point {x: 2u8, y: 0u8, value: 0u16}, p3: Point {x: 3u8, y: 0u8, value: 0u16}},
             r1: Row {p0: Point {x: 0u8, y: 1u8, value: 0u16}, p1: Point {x: 1u8, y: 1u8, value: 0u16}, p2: Point {x: 2u8, y: 1u8, value: 0u16}, p3: Point {x: 3u8, y: 1u8, value: 0u16}},
             r2: Row {p0: Point {x: 0u8, y: 2u8, value: 0u16}, p1: Point {x: 1u8, y: 2u8, value: 0u16}, p2: Point {x: 2u8, y: 2u8, value: 0u16}, p3: Point {x: 3u8, y: 2u8, value: 0u16}},
-            r3: Row {p0: Point {x: 0u8, y: 3u8, value: 0u16}, p1: Point {x: 1u8, y: 3u8, value: 0u16}, p2: Point {x: 2u8, y: 3u8, value: 0u16}, p3: Point {x: 3u8, y: 3u8, value: 0u16}},
+            r3: Row {p0: Point {x: 0u8, y: 3u8, value: 0u16}, p1: Point {x: 1u8, y: 3u8, value: 0u16}, p2: Point {x: 2u8, y: 3u8, value: 0u16}, p3: Point {x: 3u8, y: 3u8, value: 0u16}}
         };
     }
 
-    function clean_board(board: Board) -> Board {
-        board.r0.p0.value = 0;
-        board.r0.p1.value = 0;
-        board.r0.p2.value = 0;
-        board.r0.p3.value = 0;
+    inline set_point_value(board: Board, i: u8, j: u8, value: u16) -> Board {
+        //------------------------------------------------------------
+        // Unpacking the values
+        //------------------------------------------------------------
+        let r0p0: u16 = board.r0.p0.value;
+        let r0p1: u16 = board.r0.p0.value;
+        let r0p2: u16 = board.r0.p0.value;
+        let r0p3: u16 = board.r0.p0.value;
+        
+        let r1p0: u16 = board.r0.p0.value;
+        let r1p1: u16 = board.r0.p0.value;
+        let r1p2: u16 = board.r0.p0.value;
+        let r1p3: u16 = board.r0.p0.value;
 
-        board.r1.p0.value = 0;
-        board.r1.p1.value = 0;
-        board.r1.p2.value = 0;
-        board.r1.p3.value = 0;
+        let r2p0: u16 = board.r0.p0.value;
+        let r2p1: u16 = board.r0.p0.value;
+        let r2p2: u16 = board.r0.p0.value;
+        let r2p3: u16 = board.r0.p0.value;
 
-        board.r2.p0.value = 0;
-        board.r2.p1.value = 0;
-        board.r2.p2.value = 0;
-        board.r2.p3.value = 0;
-
-        board.r3.p0.value = 0;
-        board.r3.p1.value = 0;
-        board.r3.p2.value = 0;
-        board.r3.p3.value = 0;
-
-        return board;
-    }
-
-    function set_point_value(board: Board, i: u8, j: u8, value: u16) -> Board {
+        let r3p0: u16 = board.r0.p0.value;
+        let r3p1: u16 = board.r0.p0.value;
+        let r3p2: u16 = board.r0.p0.value;
+        let r3p3: u16 = board.r0.p0.value;
+        //------------------------------------------------------------
+        // Updating the value
+        //------------------------------------------------------------
         if (i == 0u8) {
             if (j == 0u8) {
-                board.r0.p0 = value;
+                r0p0 = value;
+            } else if (j == 1u8) {
+                r0p1 = value;
+            } else if (j == 1u8) {
+                r0p2 = value;
+            } else {
+                r0p3 = value;
             }
-            else if (j == 1u8) {
-                board.r0.p1 = value;
-            }
-            else if (j == 1u8) {
-                board.r0.p2 = value;
-            }
-            else {
-                board.r0.p3 = value;
-            }
-        }
-        else if (i == 1u8) {
+        } else if (i == 1u8) {
             if (j == 0u8) {
-                board.r1.p0 = value;
-            }
-            else if (j == 1u8) {
-                board.r1.p1 = value;
-            }
-            else if (j == 1u8) {
-                board.r1.p2 = value;
-            }
-            else {
-                board.r1.p3 = value;
+                r1p0 = value;
+            } else if (j == 1u8) {
+                r1p1 = value;
+            } else if (j == 1u8) {
+                r1p2 = value;
+            } else {
+                r1p3 = value;
             }
         }
         if (i == 2u8) {
             if (j == 0u8) {
-                board.r2.p0 = value;
+                r2p0 = value;
+            } else if (j == 1u8) {
+                r2p1 = value;
+            } else if (j == 1u8) {
+                r2p2 = value;
+            } else {
+                r2p3 = value;
             }
-            else if (j == 1u8) {
-                board.r2.p1 = value;
-            }
-            else if (j == 1u8) {
-                board.r2.p2 = value;
-            }
-            else {
-                board.r2.p3 = value;
-            }
-        }
-        else {
+        } else {
             if (j == 0u8) {
-                board.r3.p0 = value;
-            }
-            else if (j == 1u8) {
-                board.r3.p1 = value;
-            }
-            else if (j == 1u8) {
-                board.r3.p2 = value;
-            }
-            else {
-                board.r3.p3 = value;
+                r3p0 = value;
+            } else if (j == 1u8) {
+                r3p1 = value;
+            } else if (j == 1u8) {
+                r3p2 = value;
+            } else {
+                r3p3 = value;
             }
         }
-
-        return board;
+        //------------------------------------------------------------
+        // Packing the board back
+        //------------------------------------------------------------
+        return Board {
+            r0: Row {p0: Point {x: 0u8, y: 0u8, value: r0p0}, p1: Point {x: 1u8, y: 0u8, value: r0p1}, p2: Point {x: 2u8, y: 0u8, value: r0p2}, p3: Point {x: 3u8, y: 0u8, value: r0p3}},
+            r1: Row {p0: Point {x: 0u8, y: 1u8, value: r1p0}, p1: Point {x: 1u8, y: 1u8, value: r1p1}, p2: Point {x: 2u8, y: 1u8, value: r1p2}, p3: Point {x: 3u8, y: 1u8, value: r1p3}},
+            r2: Row {p0: Point {x: 0u8, y: 2u8, value: r2p0}, p1: Point {x: 1u8, y: 2u8, value: r2p1}, p2: Point {x: 2u8, y: 2u8, value: r2p2}, p3: Point {x: 3u8, y: 2u8, value: r2p3}},
+            r3: Row {p0: Point {x: 0u8, y: 3u8, value: r3p0}, p1: Point {x: 1u8, y: 3u8, value: r3p1}, p2: Point {x: 2u8, y: 3u8, value: r3p2}, p3: Point {x: 3u8, y: 3u8, value: r3p3}}
+        };
     }
 
-    function create_empty_buffer() -> Row {
-        return Row {p0: Point {x: 0u8, y: 0u8, value: 0u16}, p1: Point {x: 1u8, y: 0u8, value: 0u16}, p2: Point {x: 2u8, y: 0u8, value: 0u16}, p3: Point {x: 3u8, y: 0u8, value: 0u16}};
+    inline create_filled_buffer(val: u16) -> Buffer {
+        return Buffer {v0: val, v1: val, v2: val, v3: val};
+    }
+
+    // Allocates a value to the closest empty space
+    inline allocate_to_buffer(buffer: Buffer, element: u16) -> Buffer {
+        assert(buffer.v0 == 0u16 || buffer.v1 == 0u16 || buffer.v2 == 0u16 || buffer.v3 == 0u16)
+        if (buffer.v0 == 0u16) {
+            return Buffer {v0: element, v1: 0u16, v2: 0u16, v3: 0u16};
+        }
+        if (buffer.v1 == 0u16) {
+            return Buffer {v0: buffer.v0, v1: element, v2: 0u16, v3: 0u16};
+        }
+        if (buffer.v2 == 0u16) {
+            return Buffer {v0: buffer.v0, v1: buffer.v1, v2: element, v3: 0u16};
+        }
+        
+        return Buffer {v0: buffer.v0, v1: buffer.v1, v2: buffer.v2, v3: element};
+    }
+
+    // Calculates buffer movement: 0 - up, 1 - right, 2 - bottom, 3 - left
+    // if buffer is a column, first element is considered the highest
+    function calculate_buffer(buffer: Buffer, side: u8) -> Buffer {
+        let new_buffer: Buffer = create_filled_buffer(0u16);
+        if (side == 0u8) { // up
+            if (buffer.v0 == buffer.v1) {
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
+                if (buffer.v2 == buffer.v3) { new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16); }
+            } else if (buffer.v1 == buffer.v2) {
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v1 * 2u16);
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v3);
+            } else if (buffer.v2 == buffer.v3) {
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v1);
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16);
+            }
+        } else if (side == 1u8) { // right
+            if (buffer.v3 == buffer.v2) {
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
+            }
+        }
+
+        return new_buffer;
     }
     //------------------------------------------------------------
 
-    mapping games: address -> Board;
-
+    mapping games: address => Board;
+    
     transition main(public a: u32, b: u32) -> u32 {
         let c: u32 = a + b;
         return c;
