@@ -31,6 +31,13 @@ program game_2048.aleo {
         r3: Row,
     }
 
+    // Game session for the player which is
+    // stored in the mapping for all users
+    struct Game {
+        board: Board,
+        score: u16
+    }
+
     // As Leo doesn't support normal arrays by
     // default, there is a need to normalize
     // the syntax by making the helper functions
@@ -168,34 +175,66 @@ program game_2048.aleo {
         return Buffer {v0: buffer.v0, v1: buffer.v1, v2: buffer.v2, v3: element};
     }
 
-    // Calculates buffer movement: 0 - up, 1 - right, 2 - bottom, 3 - left
+    // Allocates a value to the end empty space
+    inline allocate_to_end_buffer buffer(buffer: Buffer, element: u16) -> Buffer {
+        assert(buffer.v0 == 0u16 || buffer.v1 == 0u16 || buffer.v2 == 0u16 || buffer.v3 == 0u16)
+        if (buffer.v3 == 0u16) {
+            return Buffer {v0: 0u16, v1: 0u16, v2: 0u16, v3: element};
+        }
+        if (buffer.v2 == 0u16) {
+            return Buffer {v0: 0u16, v1: 0u16, v2: element, v3: buffer.v3};
+        }
+        if (buffer.v1 == 0u16) {
+            return Buffer {v0: 0u16, v1: element, v2: buffer.v2, v3: buffer.v3};
+        }
+        
+        return Buffer {v0: element, v1: buffer.v1, v2: buffer.v2, v3: buffer.v3};
+    }
+
+    // Puts the spaces where are needed depending on the
+    // movement side so all the buffer blocks go in there
+    // Side options: 0 - top, 1 - right, 2 - bottom, 3 - left
+    inline get_spaced_buffer(buffer: Buffer, side: u8) -> Buffer {
+        let new_buffer: Buffer = create_filled_buffer(0u16);
+        if (side == 1u8 || side == 2u8) {
+            if (buffer.v3 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v3);}
+            if (buffer.v2 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v2);}
+            if (buffer.v1 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v1);}
+            if (buffer.v0 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v0);}
+        }
+
+        return new_buffer;
+    }
+
+    // Calculates buffer movement: 0 - top, 1 - right, 2 - bottom, 3 - left
     // if buffer is a column, first element is considered the highest
     function calculate_buffer(buffer: Buffer, side: u8) -> Buffer {
         let new_buffer: Buffer = create_filled_buffer(0u16);
-        if (side == 0u8) { // up
-            if (buffer.v0 == buffer.v1) {
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
-                if (buffer.v2 == buffer.v3) { new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16); }
-            } else if (buffer.v1 == buffer.v2) {
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v1 * 2u16);
+
+        if (buffer.v0 == buffer.v1) {
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
+            if (buffer.v2 == buffer.v3) { new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16); }
+            else { 
+                new_buffer = allocate_to_buffer(new_buffer, buffer.v2);
                 new_buffer = allocate_to_buffer(new_buffer, buffer.v3);
-            } else if (buffer.v2 == buffer.v3) {
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v1);
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16);
             }
-        } else if (side == 1u8) { // right
-            if (buffer.v3 == buffer.v2) {
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
-            }
+        } else if (buffer.v1 == buffer.v2) {
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v1 * 2u16);
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v3);
+        } else if (buffer.v2 == buffer.v3) {
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v1);
+            new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16);
         }
+
+        new_buffer = get_spaced_buffer(new_buffer, side);
 
         return new_buffer;
     }
     //------------------------------------------------------------
 
-    mapping games: address => Board;
+    mapping games: address => Game;
     
     transition main(public a: u32, b: u32) -> u32 {
         let c: u32 = a + b;
