@@ -1,2 +1,4 @@
 outputs/
 build/
+.env
+.info
