@@ -1,3 +1,5 @@
+import board.leo;
+
 // The 'game_2048' program.
 program game_2048.aleo {
     // Point class represents a single tile
@@ -44,7 +46,7 @@ program game_2048.aleo {
     // the syntax by making the helper functions
     // (But they don't look nice either)
     //------------------------------------------------------------
-    inline create_empty_board() -> Board {
+    /*inline create_empty_board() -> Board {
         return Board {
             r0: Row {p0: Point {x: 0u8, y: 0u8, val: 0u16}, p1: Point {x: 1u8, y: 0u8, val: 0u16}, p2: Point {x: 2u8, y: 0u8, val: 0u16}, p3: Point {x: 3u8, y: 0u8, val: 0u16}},
             r1: Row {p0: Point {x: 0u8, y: 1u8, val: 0u16}, p1: Point {x: 1u8, y: 1u8, val: 0u16}, p2: Point {x: 2u8, y: 1u8, val: 0u16}, p3: Point {x: 3u8, y: 1u8, val: 0u16}},
@@ -312,5 +314,5 @@ program game_2048.aleo {
     finalize make_move(board: Board, game: Game, caller: address) {
         game = Game {board: board, score: game.score, status: game.status};
         Mapping::set(games, caller, game);
-    }
+    }*/
 }
