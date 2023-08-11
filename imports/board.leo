@@ -111,18 +111,18 @@ program helloworld.aleo {
       tile2 = buffer & tile2;
       tile3 = buffer & tile3;
 
-      tile0 = tile0 >> 12u8;
-      tile1 = tile1 >> 8u8;
       tile2 = tile2 >> 4u8;
+      tile1 = tile1 >> 8u8;
+      tile0 = tile0 >> 12u8;
 
-      if (tile0 == 0u64) { tile0 = tile; }
-      else if (tile1 == 0u64) { tile1 = tile; }
+      if (tile3 == 0u64) { tile3 = tile; }
       else if (tile2 == 0u64) { tile2 = tile; }
-      else if (tile3 == 0u64) { tile3 = tile; }
+      else if (tile1 == 0u64) { tile1 = tile; }
+      else if (tile0 == 0u64) { tile0 = tile; }
 
-      tile1 = tile1 << 4u8;
-      tile2 = tile2 << 8u8;
-      tile3 = tile3 << 12u8;
+      tile2 = tile2 << 4u8;
+      tile1 = tile1 << 8u8;
+      tile0 = tile0 << 12u8;
 
       return tile0 + tile1 + tile2 + tile3;
     }
@@ -138,18 +138,18 @@ program helloworld.aleo {
       tile2 = buffer & tile2;
       tile3 = buffer & tile3;
 
-      tile0 = tile0 >> 12u8;
-      tile1 = tile1 >> 8u8;
       tile2 = tile2 >> 4u8;
+      tile1 = tile1 >> 8u8;
+      tile0 = tile0 >> 12u8;
 
-      if (tile3 == 0u64) { tile3 = tile; }
-      else if (tile2 == 0u64) { tile2 = tile; }
+      if (tile0 == 0u64) { tile0 = tile; }
       else if (tile1 == 0u64) { tile1 = tile; }
-      else if (tile0 == 0u64) { tile0 = tile; }
+      else if (tile2 == 0u64) { tile2 = tile; }
+      else if (tile3 == 0u64) { tile3 = tile; }
 
-      tile1 = tile1 << 4u8;
-      tile2 = tile2 << 8u8;
-      tile3 = tile3 << 12u8;
+      tile2 = tile2 << 4u8;
+      tile1 = tile1 << 8u8;
+      tile0 = tile0 << 12u8;
 
       return tile0 + tile1 + tile2 + tile3;
     }
@@ -306,6 +306,10 @@ program helloworld.aleo {
 
     transition get_buffer(tiles: u64) -> u64 {
         return extract_tiles_buffer(tiles);
+    }
+
+    transition buffer_left() -> u64 {
+        return allocate_to_buffer_left(63072u64, 5u64);
     }
 
     transition get_tiles_left(tiles: u64) -> MoveResult {
