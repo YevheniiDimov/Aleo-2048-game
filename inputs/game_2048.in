@@ -2,21 +2,53 @@
 [make_move]
 public side: u8 = 3u8; 
 
-[get_row]
+[move_board]
 public board: u64 = 1153204147848356864u64;
 
 [get_col]
 public board: u64 = 1153204147848356864u64;
-/*
+public index: u8 = 0u8;
+
+[get_row]
+public board: u64 = 1153204147848356864u64;
+public index: field = 0field;
+
+[move_tiles]
+public board: u64 = 1153204147848356864u64;
+
+[get_tiles]
+public board: u64 = 1153204147848356864u64;
+
+[get_buffer]
+public tiles: u64 = 8452u64; // 0010 0001 0000 0100
+
+[move]
+public board: board_state = board_state { 
+    owner: aleo1elm7z5rj9h9g9mdzxm4nzl7mwycq9wngr4ggarekqft8vtk4qs9s5nvhlj,
+    state_address: 182526005873639861082299484735014541321u128,
+    prev_state_address: 0u128,
+    board: 1153204147848356864u64,
+    score: 0u16,
+    points: 0u16,
+    game_state: 0u8
+};
+public side: u8 = 1u8;
+
+[get_tiles_left]
+public tiles: u64 = 4610u64; // 0001 0010 0000 0010
+
+[get_tiles_right]
+public tiles: u64 = 4610u64; // 0001 0010 0000 0010
+/* Board
 0001 0000 0000 0001
 0000 0001 0001 0000
 0000 0010 0000 0010
 0010 0100 0000 0000
 */
 //===>
-/*
+/* Board moved right
 0000 0000 0000 0010
-0000 0000 0000 0000
-0000 0000 0000 0000
-0000 0000 0000 0000
+0000 0000 0000 0010
+0000 0000 0000 0011
+0000 0000 0010 0100
 */
