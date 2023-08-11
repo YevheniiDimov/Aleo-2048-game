@@ -6,7 +6,8 @@ program helloworld.aleo {
       board: u64,
       score: u64,
       points: u64,
-      game_state: u8
+      move: u16,
+      game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
     }
 
     struct MoveResult {
@@ -187,10 +188,11 @@ program helloworld.aleo {
     }
 
     function move_tiles_right(tiles: u64) -> MoveResult {
-      let tile0: u64 = extract_tile(tiles, 0u8, 0u8);
-      let tile1: u64 = extract_tile(tiles, 1u8, 0u8);
-      let tile2: u64 = extract_tile(tiles, 2u8, 0u8);
-      let tile3: u64 = extract_tile(tiles, 3u8, 0u8);
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
       let points: u64 = 0u64;
         
@@ -225,10 +227,11 @@ program helloworld.aleo {
     }
 
     function move_tiles_left(tiles: u64) -> MoveResult {
-      let tile0: u64 = extract_tile(tiles, 0u8, 0u8);
-      let tile1: u64 = extract_tile(tiles, 1u8, 0u8);
-      let tile2: u64 = extract_tile(tiles, 2u8, 0u8);
-      let tile3: u64 = extract_tile(tiles, 3u8, 0u8);
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
       let points: u64 = 0u64;
         
@@ -290,6 +293,37 @@ program helloworld.aleo {
       return row3 + row2 + row1 + row0;
     }
 
+    function is_won(row0: u64, row1: u64, row2: u64, row3: u64) -> bool {
+      return extract_tile(row0, 0u8, 0u8) == 11u64 || extract_tile(row0, 1u8, 0u8) == 11u64 || extract_tile(row0, 2u8, 0u8) == 11u64 || extract_tile(row0, 3u8, 0u8) == 11u64
+      || extract_tile(row1, 0u8, 0u8) == 11u64 || extract_tile(row1, 1u8, 0u8) == 11u64 || extract_tile(row1, 2u8, 0u8) == 11u64 || extract_tile(row1, 3u8, 0u8) == 11u64
+      || extract_tile(row2, 0u8, 0u8) == 11u64 || extract_tile(row2, 1u8, 0u8) == 11u64 || extract_tile(row2, 2u8, 0u8) == 11u64 || extract_tile(row2, 3u8, 0u8) == 11u64
+      || extract_tile(row3, 0u8, 0u8) == 11u64 || extract_tile(row3, 1u8, 0u8) == 11u64 || extract_tile(row3, 2u8, 0u8) == 11u64 || extract_tile(row3, 3u8, 0u8) == 11u64;
+    }
+
+    function is_mergeable_or_empty(tiles: u64) -> bool {
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
+
+      return tile0 == 0u64 || tile1 == 0u64 || tile2 == 0u64 || tile3 == 0u64 || (tile0 == tile1) || (tile1 == tile2) || (tile2 == tile3);
+    }
+
+    inline get_pseudorandom_number(hash: u64, upper: u64, lower: u64) -> u64 {
+      return (hash % (upper - lower + 1u64)) + lower;
+    }
+
+    function generate_tile(board: board_state) -> board_state {
+      assert(board.game_state == 2u8);
+      let tile: u64 = 1u64;
+      if (board.move % 10u16 == 0u16) { tile = 2u64; };
+
+      let hashed_obj: MoveResult = MoveResult {board: board.board.sub_wrapped(board.points), points: board.points};
+      let random_x: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(board), 4u64, 0u64);
+      let random_y: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(hashed_obj), 4u64, 0u64);
+    }
+
     transition get_col(board: u64, index: u8) -> u64 {
         return extract_column(board, index);
     }
@@ -323,8 +357,10 @@ program helloworld.aleo {
     // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
     transition move(board: board_state, side: u8) -> board_state {
       assert(board.owner == self.caller); // Check if the caller is the state owner
+      assert(board.game_state < 2u8); // Check if the game is not finished and has a new tile
       let opposite: bool = side == 2u8 || side == 3u8;
       let new_board: u64 = 0u64;
+      let game_state: u8 = 2u8;
       let points: u64 = 0u64;
 
       if (side == 0u8) { // top
@@ -332,7 +368,15 @@ program helloworld.aleo {
         let col1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 2u8)));
         let col2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 1u8)));
         let col3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 0u8)));
-    
+
+        if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+        else {
+          let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+          || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+
+          if (!is_movable) { game_state = 4u8; }
+        }
+
         points = col0.points + col1.points + col2.points + col3.points;
         new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
       } else if (side == 2u8) { // bottom
@@ -340,7 +384,15 @@ program helloworld.aleo {
         let col1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 2u8)));
         let col2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 1u8)));
         let col3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 0u8)));
-    
+
+        if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+        else {
+          let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+          || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+
+          if (!is_movable) { game_state = 4u8; }
+        }
+
         points = col0.points + col1.points + col2.points + col3.points;
         new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
       } else if (side == 1u8) { // right
@@ -348,6 +400,14 @@ program helloworld.aleo {
         let row1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 2field)));
         let row2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 1field)));
         let row3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 0field)));
+
+        if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+        else {
+          let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+          || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+          if (!is_movable) { game_state = 4u8; }
+        }
 
         points = row0.points + row1.points + row2.points + row3.points;
 
@@ -360,6 +420,14 @@ program helloworld.aleo {
         let row1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 2field)));
         let row2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 1field)));
         let row3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 0field)));
+
+        if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+        else {
+          let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+          || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+          if (!is_movable) { game_state = 4u8; }
+        }
 
         points = row0.points + row1.points + row2.points + row3.points;
 
@@ -379,7 +447,8 @@ program helloworld.aleo {
         prev_state_address: board.state_address,
         score: board.score + points,
         points: points,
-        game_state: 1u8
+        move: board.move + 1u16,
+        game_state: game_state
       };
     }
 }
