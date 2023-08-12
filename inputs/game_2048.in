@@ -23,25 +23,39 @@ public board: u64 = 1153204147848356864u64;
 public tiles: u64 = 8452u64; // 0010 0001 0000 0100
 
 [generate_tile]
-public board: board_state = board_state { 
-    owner: aleo1elm7z5rj9h9g9mdzxm4nzl7mwycq9wngr4ggarekqft8vtk4qs9s5nvhlj,
-    state_address: 182526005873639861082299484735014541321u128,
-    prev_state_address: 0u128,
-    board: 1153204147848356864u64,
-    score: 0u16,
-    points: 0u16,
-    game_state: 2u8
+public board: board_state = board_state {
+  owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
+  state_address: 186745464950281957681873417257662571680u128,
+  prev_state_address: 19246737641159659976668293381117294076u128,
+  board: 0u64,
+  score: 0u64,
+  points: 0u64,
+  move: 7u16,
+  game_state: 2u8,
+  _nonce: 6445753838563612852361403410957604757295100334295896769898709025717447854318group
 };
 
+[set_row_test]
+public board: u64 = 0u64;
+public index: u8 = 0u8;
+public row: u64 = 65535u64;
+
+[set_tile_test]
+public row: u64 = 0u64;
+public index: u64 = 0u8;
+public tile: u64 = 240u64;
+
 [move]
-public board: board_state = board_state { 
-    owner: aleo1elm7z5rj9h9g9mdzxm4nzl7mwycq9wngr4ggarekqft8vtk4qs9s5nvhlj,
-    state_address: 182526005873639861082299484735014541321u128,
-    prev_state_address: 0u128,
-    board: 1153204147848356864u64,
-    score: 0u16,
-    points: 0u16,
-    game_state: 0u8
+public board: board_state = board_state {
+  owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
+  state_address: 186745464950281957681873417257662571680u128,
+  prev_state_address: 19246737641159659976668293381117294076u128,
+  board: 0u64,
+  score: 0u64,
+  points: 0u64,
+  move: 7u16,
+  game_state: 2u8,
+  _nonce: 6445753838563612852361403410957604757295100334295896769898709025717447854318group
 };
 public side: u8 = 1u8;
 

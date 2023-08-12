@@ -1,11 +1,11 @@
-program verdant_steel_legend_diamond.aleo {
+program helloworld.aleo {
     struct Player {
       games_played: u64,
       games_won: u64,
       max_score: u64
     }
 
-    public mapping players: address => Player;
+    mapping players: address => Player;
 
     record board_state {
       owner: address,
@@ -26,22 +26,18 @@ program verdant_steel_legend_diamond.aleo {
     struct GenerateTileResult {
       row: u64,
       generated: bool,
+      index: u8,
       last_tile: u8
     }
 
-    struct FirstSign {
-      board: u64,
-      player: address
+    struct Sign64 {
+      num: u64
     }
 
-    struct SecondSign {
-      salt: u64,
-      player: address
-    }
-
-    struct ThirdSign {
-      sign0: u64,
-      sign1: u64
+    struct Sign {
+      sign0: u16,
+      sign1: u16,
+      sign2: u16
     }
 
     inline extract_row(board: u64, index: field) -> u64 {
@@ -184,14 +180,16 @@ program verdant_steel_legend_diamond.aleo {
 
     inline set_tile(row: u64, index: u8, tile: u64) -> u64 {
       let mask: u64 = 15u64 * 16u64.pow(index);
-      let empty: u64 = row & !(mask);  
+      let flipped_mask: u64 = 18446744073709551615u64 - mask;
+      let empty: u64 = row & flipped_mask;
       tile = tile << 4u8.mul(index);
       return row + tile;
     }
 
     inline set_row(board: u64, index: u8, row: u64) -> u64 {
       let mask: u64 = 65535u64 * 65536u64.pow(index);
-      let empty: u64 = board & !(mask);  
+      let flipped_mask: u64 = 18446744073709551615u64 - mask;
+      let empty: u64 = row & flipped_mask;  
       row = row << 16u8.mul(index);
       return board + row;
     }
@@ -345,19 +343,21 @@ program verdant_steel_legend_diamond.aleo {
     }
 
     function get_hash(board: u64, player: address, salt: u64) -> u128 {
-      let hash0: u64 = Pedersen64::hash_to_u64(FirstSign {board: board, player: player});
-      let hash1: u64 = Pedersen64::hash_to_u64(SecondSign {salt: salt, player: player});
-      return Pedersen128::hash_to_u128(ThirdSign {sign0: hash0, sign1: hash1});
+      let hash0: u16 = Poseidon8::hash_to_u16(Sign64 {num: board});
+      let hash1: u16 = Poseidon8::hash_to_u16(player);
+      let hash2: u16 = Poseidon8::hash_to_u16(Sign64 {num: salt});
+      
+      return Poseidon8::hash_to_u128(Sign {sign0: hash0, sign1: hash1, sign2: hash2});
     }
 
     inline get_pseudorandom_number(hash: u64, upper: u64, lower: u64) -> u64 {
       return (hash % (upper - lower + 1u64)) + lower;
     }
 
-    inline generate_tile_row(row: u64, chance: u64, tile: u64) -> GenerateTileResult {
-      let tile0: u64 = extract_tile(row, 3u8, 12u8);
-      let tile1: u64 = extract_tile(row, 2u8, 8u8);
-      let tile2: u64 = extract_tile(row, 1u8, 4u8);
+    function generate_tile_row(row: u64, chance: u64, tile: u64, index: u8) -> GenerateTileResult {
+      let tile0: u64 = extract_tile(row, 3u8, 0u8);
+      let tile1: u64 = extract_tile(row, 2u8, 0u8);
+      let tile2: u64 = extract_tile(row, 1u8, 0u8);
       let tile3: u64 = extract_tile(row, 0u8, 0u8);
       let generated: bool = false;
       let last_tile: u8 = 99u8;
@@ -367,36 +367,41 @@ program verdant_steel_legend_diamond.aleo {
       else if (tile1 == 0u64) {last_tile = 1u8;}
       else if (tile0 == 0u64) {last_tile = 0u8;}
 
-      if (tile0 == 0u64 && get_pseudorandom_number(tile0, 10u64, 0u64) < chance) { tile0 = tile << 12u8; generated = true; }
-      else if (tile2 == 0u64 && get_pseudorandom_number(tile2, 10u64, 0u64) < chance) { tile2 = tile << 8u8; generated = true; }
-      else if (tile1 == 0u64 && get_pseudorandom_number(tile1, 10u64, 0u64) < chance) { tile1 = tile << 4u8; generated = true; }
-      else if (tile3 == 0u64 && get_pseudorandom_number(tile3, 10u64, 0u64) < chance) { tile3 = tile; generated = true; }
+      if (tile0 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile0), 10u64, 0u64) < chance) { tile0 = tile; generated = true; }
+      else if (tile2 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile2 + chance), 10u64, 0u64) < chance) { tile2 = tile; generated = true; }
+      else if (tile1 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile1 + chance), 10u64, 0u64) < chance) { tile1 = tile; generated = true; }
+      else if (tile3 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile3 + chance), 10u64, 0u64) < chance) { tile3 = tile; generated = true; }
 
-      return GenerateTileResult { row: tile0 + tile1 + tile2 + tile3, generated: generated, last_tile: last_tile };
+      tile0 = tile0 << 12u8;
+      tile1 = tile1 << 8u8;
+      tile2 = tile2 << 4u8;
+
+      return GenerateTileResult { row: tile0 + tile1 + tile2 + tile3, generated: generated, index: index, last_tile: last_tile };
     }
 
     transition generate_tile(board: board_state) -> board_state {
-      assert(board.game_state == 2u8);
+      assert(board.game_state == 2u8); // Board state should be pending a tile
       let tile: u64 = 1u64;
-      if (board.move % 10u16 == 0u16) { tile = 2u64; }
+      if (board.move % 10u16 == 0u16) { tile = 2u64; } // Get 2 every tenth move
 
-      let chance: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(board), 10u64, 0u64);
-      if (chance < 2u64) { tile = 2u64; } // 10% chance to get 4
+      let chance: u64 = get_pseudorandom_number(Poseidon8::hash_to_u64(board), 10u64, 0u64);
 
       let index: field = 0field;
       let generated: bool = false;
       let last_tile: u8 = 99u8;
       let last_row: field = 99field;
-      let generated_row: GenerateTileResult = GenerateTileResult {row: 0u64, generated: false, last_tile: 99u8};
+      let generated_row: GenerateTileResult = GenerateTileResult {row: 0u64, generated: false, index: 99u8, last_tile: 99u8};
       
       let new_board: u64 = 0u64;
       for i: u8 in 0u8..4u8 {
         if (!generated) {
-          let row: GenerateTileResult = generate_tile_row(extract_row(board.board, index), chance, tile);
+          let row: GenerateTileResult = generate_tile_row(extract_row(board.board, index), chance, tile, index as u8);
           generated = row.generated;
 
-          if (generated) { generated_row = row; }
-          else if (row.last_tile != 99u8) {
+          if (row.generated) { 
+            generated = row.generated;
+            generated_row = row; 
+          } else if (row.last_tile != 99u8) {
             last_tile = row.last_tile;
             last_row = index;
           }
@@ -410,6 +415,9 @@ program verdant_steel_legend_diamond.aleo {
         new_row = set_tile(new_row, last_tile, tile);
         new_board = set_row(board.board, last_row as u8, new_row);
       }
+      else {
+        new_board = set_row(board.board, generated_row.index, generated_row.row);
+      }
 
       return board_state {
         owner: board.owner,
@@ -421,6 +429,22 @@ program verdant_steel_legend_diamond.aleo {
         move: board.move,
         game_state: 1u8
       };
+    }
+
+    transition generate_tile_row_test() -> GenerateTileResult {
+      return generate_tile_row(37280u64, 10u64, 1u64, 0u8); // 37024
+    }
+
+    transition pseudonumber_test() -> u64 {
+      return get_pseudorandom_number(45782136139006u64, 10u64, 0u64);
+    }
+
+    transition set_row_test(board: u64, index: u8, row: u64) -> u64 {
+      return set_row(board, index, row);
+    }
+
+    transition set_tile_test(row: u64, index: u8, tile: u64) -> u64 {
+      return set_tile(row, index, tile);
     }
 
     transition get_col(board: u64, index: u8) -> u64 {
@@ -484,81 +508,83 @@ program verdant_steel_legend_diamond.aleo {
       let game_state: u8 = 2u8;
       let points: u64 = 0u64;
 
-      if (side == 0u8) { // top
-        let col0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 3u8)));
-        let col1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 2u8)));
-        let col2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 1u8)));
-        let col3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 0u8)));
+      if (board.board != 0u64) {
+        if (side == 0u8) { // top
+          let col0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 3u8)));
+          let col1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 2u8)));
+          let col2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 1u8)));
+          let col3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 0u8)));
 
-        if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
-        else {
-          let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
-          || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+          if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
 
-          if (!is_movable) { game_state = 4u8; }
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+        } else if (side == 2u8) { // bottom
+          let col0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 3u8)));
+          let col1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 2u8)));
+          let col2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 1u8)));
+          let col3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 0u8)));
+
+          if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+        } else if (side == 1u8) { // right
+          let row0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 3field)));
+          let row1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 2field)));
+          let row2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 1field)));
+          let row3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 0field)));
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = row0.points + row1.points + row2.points + row3.points;
+
+          let row2_shifted: u64 = row2.board << 16u8;
+          let row1_shifted: u64 = row2.board << 32u8;
+          let row0_shifted: u64 = row2.board << 48u8;
+          new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
+        } else { // left
+          let row0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 3field)));
+          let row1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 2field)));
+          let row2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 1field)));
+          let row3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 0field)));
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = row0.points + row1.points + row2.points + row3.points;
+
+          let row2_shifted: u64 = row2.board << 16u8;
+          let row1_shifted: u64 = row2.board << 32u8;
+          let row0_shifted: u64 = row2.board << 48u8;
+          new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
         }
 
-        points = col0.points + col1.points + col2.points + col3.points;
-        new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
-      } else if (side == 2u8) { // bottom
-        let col0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 3u8)));
-        let col1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 2u8)));
-        let col2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 1u8)));
-        let col3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 0u8)));
-
-        if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
-        else {
-          let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
-          || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
-
-          if (!is_movable) { game_state = 4u8; }
-        }
-
-        points = col0.points + col1.points + col2.points + col3.points;
-        new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
-      } else if (side == 1u8) { // right
-        let row0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 3field)));
-        let row1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 2field)));
-        let row2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 1field)));
-        let row3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 0field)));
-
-        if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
-        else {
-          let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
-          || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
-
-          if (!is_movable) { game_state = 4u8; }
-        }
-
-        points = row0.points + row1.points + row2.points + row3.points;
-
-        let row2_shifted: u64 = row2.board << 16u8;
-        let row1_shifted: u64 = row2.board << 32u8;
-        let row0_shifted: u64 = row2.board << 48u8;
-        new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
-      } else { // left
-        let row0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 3field)));
-        let row1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 2field)));
-        let row2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 1field)));
-        let row3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 0field)));
-
-        if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
-        else {
-          let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
-          || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
-
-          if (!is_movable) { game_state = 4u8; }
-        }
-
-        points = row0.points + row1.points + row2.points + row3.points;
-
-        let row2_shifted: u64 = row2.board << 16u8;
-        let row1_shifted: u64 = row2.board << 32u8;
-        let row0_shifted: u64 = row2.board << 48u8;
-        new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
+        assert(new_board != board.board); // Check if the movement is valid
       }
-
-      assert(new_board != board.board); // Check if the movement is valid
 
       return board_state {
         owner: board.owner,
