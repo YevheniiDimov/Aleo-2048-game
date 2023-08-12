@@ -1,4 +1,12 @@
 program verdant_steel_legend_diamond.aleo {
+    struct Player {
+      games_played: u64,
+      games_won: u64,
+      max_score: u64
+    }
+
+    public mapping players: address => Player;
+
     record board_state {
       owner: address,
       state_address: u128,
@@ -21,13 +29,19 @@ program verdant_steel_legend_diamond.aleo {
       last_tile: u8
     }
 
-    struct MoveSign {
+    struct FirstSign {
       board: u64,
-      prev_state_address: u128,
-      points: u64,
-      side: u8,
-      player: address,
-      salt: u64
+      player: address
+    }
+
+    struct SecondSign {
+      salt: u64,
+      player: address
+    }
+
+    struct ThirdSign {
+      sign0: u64,
+      sign1: u64
     }
 
     inline extract_row(board: u64, index: field) -> u64 {
@@ -330,6 +344,12 @@ program verdant_steel_legend_diamond.aleo {
       return tile0 == 0u64 || tile1 == 0u64 || tile2 == 0u64 || tile3 == 0u64 || (tile0 == tile1) || (tile1 == tile2) || (tile2 == tile3);
     }
 
+    function get_hash(board: u64, player: address, salt: u64) -> u128 {
+      let hash0: u64 = Pedersen64::hash_to_u64(FirstSign {board: board, player: player});
+      let hash1: u64 = Pedersen64::hash_to_u64(SecondSign {salt: salt, player: player});
+      return Pedersen128::hash_to_u128(ThirdSign {sign0: hash0, sign1: hash1});
+    }
+
     inline get_pseudorandom_number(hash: u64, upper: u64, lower: u64) -> u64 {
       return (hash % (upper - lower + 1u64)) + lower;
     }
@@ -358,7 +378,7 @@ program verdant_steel_legend_diamond.aleo {
     transition generate_tile(board: board_state) -> board_state {
       assert(board.game_state == 2u8);
       let tile: u64 = 1u64;
-      if (board.move % 10u16 == 0u16) { tile = 2u64; };
+      if (board.move % 10u16 == 0u16) { tile = 2u64; }
 
       let chance: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(board), 10u64, 0u64);
       if (chance < 2u64) { tile = 2u64; } // 10% chance to get 4
@@ -391,11 +411,10 @@ program verdant_steel_legend_diamond.aleo {
         new_board = set_row(board.board, last_row as u8, new_row);
       }
 
-      let sign: MoveSign = MoveSign { board: new_board, prev_state_address: board.state_address, points: board.points, side: 5u8, player: board.owner, salt: new_board.sub_wrapped(board.points)};
       return board_state {
         owner: board.owner,
         board: new_board,
-        state_address: Pedersen128::hash_to_u128(sign),
+        state_address: get_hash(new_board, board.owner, new_board.sub_wrapped(board.score)),
         prev_state_address: board.state_address,
         score: board.score,
         points: board.points,
@@ -432,6 +451,28 @@ program verdant_steel_legend_diamond.aleo {
 
     transition get_tiles_right(tiles: u64) ->  MoveResult {
         return move_tiles_right(tiles);
+    }
+
+    transition init_game() -> board_state {
+      return board_state {
+        owner: self.caller,
+        board: 0u64,
+        state_address: get_hash(0u64, self.caller, 6u64),
+        prev_state_address: 0u128,
+        score: 0u64,
+        points: 0u64,
+        move: 6u16,
+        game_state: 0u8
+      } then finalize(self.caller);
+    }
+
+    finalize init_game(caller: address) {
+      let player: Player = Mapping::get_or_use(players, caller, Player {games_played: 0u64, games_won: 0u64, max_score: 0u64});
+      if (player.games_played == 0u64) {
+        Mapping::set(players, caller, Player {games_played: 1u64, games_won: 0u64, max_score: 0u64});
+      } else {
+        Mapping::set(players, caller, Player {games_played: player.games_played + 1u64, games_won: 0u64, max_score: 0u64});
+      }
     }
 
     // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
@@ -519,16 +560,27 @@ program verdant_steel_legend_diamond.aleo {
 
       assert(new_board != board.board); // Check if the movement is valid
 
-      let sign: MoveSign = MoveSign { board: new_board, prev_state_address: board.state_address, points: points, side: side, player: self.caller, salt: new_board.sub_wrapped(points)};
       return board_state {
         owner: board.owner,
         board: new_board,
-        state_address: Pedersen128::hash_to_u128(sign),
+        state_address: get_hash(new_board, board.owner, new_board.sub_wrapped(points)),
         prev_state_address: board.state_address,
         score: board.score + points,
         points: points,
         move: board.move + 1u16,
         game_state: game_state
-      };
+      } then finalize(board.owner, board.score + points, game_state);
+    }
+
+    finalize move(caller: address, score: u64, game_state: u8) {
+      let player: Player = Mapping::get_or_use(players, caller, Player {games_played: 0u64, games_won: 0u64, max_score: 9999999999u64});
+      let new_score: u64 = player.max_score;
+      if (score > player.max_score) { new_score = score; }
+      assert(player.max_score < 9999999999u64); // Check if player exists
+      if (game_state == 3u8) { // Won
+        Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won + 1u64, max_score: new_score});
+      } else { // Lost or in progress
+        Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won, max_score: new_score});
+      }
     }
 }
