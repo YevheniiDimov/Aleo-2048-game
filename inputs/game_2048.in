@@ -42,20 +42,20 @@ public row: u64 = 65535u64;
 
 [set_tile_test]
 public row: u64 = 0u64;
-public index: u64 = 0u8;
-public tile: u64 = 240u64;
+public index: u8 = 1u8;
+public tile: u64 = 3u64;
 
 [move]
 public board: board_state = board_state {
   owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
-  state_address: 186745464950281957681873417257662571680u128,
-  prev_state_address: 19246737641159659976668293381117294076u128,
-  board: 0u64,
+  state_address: 243518731135115926915034364982793534781u128,
+  prev_state_address: 186745464950281957681873417257662571680u128,
+  board: 1152921504606846976u64,
   score: 0u64,
   points: 0u64,
   move: 7u16,
-  game_state: 2u8,
-  _nonce: 6445753838563612852361403410957604757295100334295896769898709025717447854318group
+  game_state: 1u8,
+  _nonce: 18074458672795999094991463089536801711516418376636961455886540873063786617group
 };
 public side: u8 = 1u8;
 

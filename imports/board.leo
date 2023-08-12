@@ -220,6 +220,8 @@ program helloworld.aleo {
     }
 
     function move_tiles_right(tiles: u64) -> MoveResult {
+      if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
+      
       let tiles_buffer: u64 = extract_tiles_buffer(tiles);
       let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
       let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
@@ -228,22 +230,22 @@ program helloworld.aleo {
       let buffer: u64 = 0u64;
       let points: u64 = 0u64;
         
-      if (tile0 == tile1) {
+      if (tile0 == tile1 && tile0 != 0u64) {
         buffer = allocate_to_buffer_right(buffer, tile0 + 1u64);
         points += tile0 + tile1;
-        if (tile2 == tile3) {
+        if (tile2 == tile3 && tile1 != 0u64) {
           points += tile2 + tile3;
           buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
         } else {
           buffer = allocate_to_buffer_right(buffer, tile2);
           buffer = allocate_to_buffer_right(buffer, tile3);
         }
-      } else if (tile1 == tile2) {
+      } else if (tile1 == tile2 && tile1 != 0u64) {
         points += tile1 + tile2;
         buffer = allocate_to_buffer_right(buffer, tile0);
         buffer = allocate_to_buffer_right(buffer, tile1 + 1u64);
         buffer = allocate_to_buffer_right(buffer, tile3);
-      } else if (tile2 == tile3) {
+      } else if (tile2 == tile3 && tile2 != 0u64) {
         points += tile2 + tile3;
         buffer = allocate_to_buffer_right(buffer, tile0);
         buffer = allocate_to_buffer_right(buffer, tile1);
@@ -259,6 +261,8 @@ program helloworld.aleo {
     }
 
     function move_tiles_left(tiles: u64) -> MoveResult {
+      if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
+
       let tiles_buffer: u64 = extract_tiles_buffer(tiles);
       let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
       let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
@@ -267,22 +271,22 @@ program helloworld.aleo {
       let buffer: u64 = 0u64;
       let points: u64 = 0u64;
         
-      if (tile3 == tile2) {
+      if (tile3 == tile2 && tile3 != 0u64) {
         buffer = allocate_to_buffer_left(buffer, tile3 + 1u64);
         points += tile3 + tile2;
-        if (tile1 == tile0) {
+        if (tile1 == tile0 && tile1 != 0u64) {
           points += tile1 + tile0;
           buffer = allocate_to_buffer_left(buffer, tile1 + 1u64);
         } else {
           buffer = allocate_to_buffer_left(buffer, tile1);
           buffer = allocate_to_buffer_left(buffer, tile0);
         }
-      } else if (tile2 == tile1) {
+      } else if (tile2 == tile1 && tile2 != 0u64) {
         points += tile2 + tile1;
         buffer = allocate_to_buffer_left(buffer, tile3);
         buffer = allocate_to_buffer_left(buffer, tile2 + 1u64);
         buffer = allocate_to_buffer_left(buffer, tile0);
-      } else if (tile1 == tile0) {
+      } else if (tile1 == tile0 && tile1 != 0u64) {
         points += tile1 + tile0;
         buffer = allocate_to_buffer_left(buffer, tile3);
         buffer = allocate_to_buffer_left(buffer, tile2);
@@ -510,10 +514,10 @@ program helloworld.aleo {
 
       if (board.board != 0u64) {
         if (side == 0u8) { // top
-          let col0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 3u8)));
-          let col1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 2u8)));
-          let col2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 1u8)));
-          let col3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_column(board.board, 0u8)));
+          let col0: MoveResult = move_tiles_left(extract_column(board.board, 3u8));
+          let col1: MoveResult = move_tiles_left(extract_column(board.board, 2u8));
+          let col2: MoveResult = move_tiles_left(extract_column(board.board, 1u8));
+          let col3: MoveResult = move_tiles_left(extract_column(board.board, 0u8));
 
           if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
           else {
@@ -526,10 +530,10 @@ program helloworld.aleo {
           points = col0.points + col1.points + col2.points + col3.points;
           new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
         } else if (side == 2u8) { // bottom
-          let col0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 3u8)));
-          let col1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 2u8)));
-          let col2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 1u8)));
-          let col3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_column(board.board, 0u8)));
+          let col0: MoveResult = move_tiles_right(extract_column(board.board, 3u8));
+          let col1: MoveResult = move_tiles_right(extract_column(board.board, 2u8));
+          let col2: MoveResult = move_tiles_right(extract_column(board.board, 1u8));
+          let col3: MoveResult = move_tiles_right(extract_column(board.board, 0u8));
 
           if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
           else {
@@ -542,10 +546,10 @@ program helloworld.aleo {
           points = col0.points + col1.points + col2.points + col3.points;
           new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
         } else if (side == 1u8) { // right
-          let row0: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 3field)));
-          let row1: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 2field)));
-          let row2: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 1field)));
-          let row3: MoveResult = move_tiles_right(extract_tiles_buffer(extract_row(board.board, 0field)));
+          let row0: MoveResult = move_tiles_right(extract_row(board.board, 3field));
+          let row1: MoveResult = move_tiles_right(extract_row(board.board, 2field));
+          let row2: MoveResult = move_tiles_right(extract_row(board.board, 1field));
+          let row3: MoveResult = move_tiles_right(extract_row(board.board, 0field));
 
           if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
           else {
@@ -558,14 +562,14 @@ program helloworld.aleo {
           points = row0.points + row1.points + row2.points + row3.points;
 
           let row2_shifted: u64 = row2.board << 16u8;
-          let row1_shifted: u64 = row2.board << 32u8;
-          let row0_shifted: u64 = row2.board << 48u8;
+          let row1_shifted: u64 = row1.board << 32u8;
+          let row0_shifted: u64 = row0.board << 48u8;
           new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
         } else { // left
-          let row0: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 3field)));
-          let row1: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 2field)));
-          let row2: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 1field)));
-          let row3: MoveResult = move_tiles_left(extract_tiles_buffer(extract_row(board.board, 0field)));
+          let row0: MoveResult = move_tiles_left(extract_row(board.board, 3field));
+          let row1: MoveResult = move_tiles_left(extract_row(board.board, 2field));
+          let row2: MoveResult = move_tiles_left(extract_row(board.board, 1field));
+          let row3: MoveResult = move_tiles_left(extract_row(board.board, 0field));
 
           if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
           else {
@@ -578,8 +582,8 @@ program helloworld.aleo {
           points = row0.points + row1.points + row2.points + row3.points;
 
           let row2_shifted: u64 = row2.board << 16u8;
-          let row1_shifted: u64 = row2.board << 32u8;
-          let row0_shifted: u64 = row2.board << 48u8;
+          let row1_shifted: u64 = row1.board << 32u8;
+          let row0_shifted: u64 = row0.board << 48u8;
           new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
         }
 
@@ -608,5 +612,18 @@ program helloworld.aleo {
       } else { // Lost or in progress
         Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won, max_score: new_score});
       }
+    }
+
+    transition row_move_test() -> (u64, u64, u64, u64) {
+      let board: u64 = 1152921504606846976u64;
+      let row0: MoveResult = move_tiles_right(extract_row(board, 3field));
+      let row1: MoveResult = move_tiles_right(extract_row(board, 2field));
+      let row2: MoveResult = move_tiles_right(extract_row(board, 1field));
+      let row3: MoveResult = move_tiles_right(extract_row(board, 0field));
+
+      let row2_shifted: u64 = row2.board << 16u8;
+      let row1_shifted: u64 = row1.board << 32u8;
+      let row0_shifted: u64 = row0.board << 48u8;
+      return (row0_shifted, row1_shifted, row2_shifted, row3.board);
     }
 }
