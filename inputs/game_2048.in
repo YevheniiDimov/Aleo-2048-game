@@ -25,14 +25,14 @@ public tiles: u64 = 8452u64; // 0010 0001 0000 0100
 [generate_tile]
 public board: board_state = board_state {
   owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
-  state_address: 186745464950281957681873417257662571680u128,
-  prev_state_address: 19246737641159659976668293381117294076u128,
-  board: 0u64,
+  state_address: 7806818262892409250982857783445712163u128,
+  prev_state_address: 123420113625549667053679838986522482670u128,
+  board: 4097u64,
   score: 0u64,
   points: 0u64,
-  move: 7u16,
+  move: 9u16,
   game_state: 2u8,
-  _nonce: 6445753838563612852361403410957604757295100334295896769898709025717447854318group
+  _nonce: 880632320506288861906057560710326912912965402945469800363408804735192517389group
 };
 
 [set_row_test]
@@ -48,25 +48,25 @@ public tile: u64 = 3u64;
 [move]
 public board: board_state = board_state {
   owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
-  state_address: 243518731135115926915034364982793534781u128,
-  prev_state_address: 186745464950281957681873417257662571680u128,
-  board: 1152921504606846976u64,
+  state_address: 123420113625549667053679838986522482670u128,
+  prev_state_address: 216205510558569216025189546884686406401u128,
+  board: 281474976714752u64,
   score: 0u64,
   points: 0u64,
-  move: 7u16,
+  move: 8u16,
   game_state: 1u8,
-  _nonce: 18074458672795999094991463089536801711516418376636961455886540873063786617group
+  _nonce: 7764320970800424216678709715081613708633203197758558317179641094418957376598group
 };
-public side: u8 = 1u8;
+public side: u8 = 2u8;
 
 [get_tiles_left]
-public tiles: u64 = 4386u64; // 0001 0001 0010 0010
+public tiles: u64 = 1u64; // 0001 0001 0010 0010
 //                    expected: 0010 0011 0000 0000
 //                        real: 
 
 [get_tiles_right]
-public tiles: u64 = 4386u64; // 0001 0001 0010 0010
-//                    expected: 0000 0000 0010 0011
+public tiles: u64 = 4096u64; // 0001 0001 0001 0100
+//                    expected: 0000 0000 0010 0100
 //                        real: 
 
 

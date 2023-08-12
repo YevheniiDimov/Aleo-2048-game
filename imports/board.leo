@@ -228,12 +228,14 @@ program helloworld.aleo {
       let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
       let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
+
+      assert(tiles_buffer != 17u64);
       let points: u64 = 0u64;
         
       if (tile0 == tile1 && tile0 != 0u64) {
         buffer = allocate_to_buffer_right(buffer, tile0 + 1u64);
         points += tile0 + tile1;
-        if (tile2 == tile3 && tile1 != 0u64) {
+        if (tile2 == tile3 && tile2 != 0u64) {
           points += tile2 + tile3;
           buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
         } else {
@@ -371,7 +373,7 @@ program helloworld.aleo {
       else if (tile1 == 0u64) {last_tile = 1u8;}
       else if (tile0 == 0u64) {last_tile = 0u8;}
 
-      if (tile0 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile0), 10u64, 0u64) < chance) { tile0 = tile; generated = true; }
+      if (tile0 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile0 + chance), 10u64, 0u64) < chance) { tile0 = tile; generated = true; }
       else if (tile2 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile2 + chance), 10u64, 0u64) < chance) { tile2 = tile; generated = true; }
       else if (tile1 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile1 + chance), 10u64, 0u64) < chance) { tile1 = tile; generated = true; }
       else if (tile3 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile3 + chance), 10u64, 0u64) < chance) { tile3 = tile; generated = true; }
@@ -400,7 +402,6 @@ program helloworld.aleo {
       for i: u8 in 0u8..4u8 {
         if (!generated) {
           let row: GenerateTileResult = generate_tile_row(extract_row(board.board, index), chance, tile, index as u8);
-          generated = row.generated;
 
           if (row.generated) { 
             generated = row.generated;
@@ -414,13 +415,13 @@ program helloworld.aleo {
         }
       }
 
-      if (!generated) {
+      if (generated) {
+        new_board = set_row(board.board, generated_row.index, generated_row.row);
+      }
+      else {
         let new_row: u64 = extract_row(board.board, last_row);
         new_row = set_tile(new_row, last_tile, tile);
         new_board = set_row(board.board, last_row as u8, new_row);
-      }
-      else {
-        new_board = set_row(board.board, generated_row.index, generated_row.row);
       }
 
       return board_state {
@@ -625,5 +626,14 @@ program helloworld.aleo {
       let row1_shifted: u64 = row1.board << 32u8;
       let row0_shifted: u64 = row0.board << 48u8;
       return (row0_shifted, row1_shifted, row2_shifted, row3.board);
+    }
+
+    transition generate_tile_row_test() -> GenerateTileResult {
+      return generate_tile_row(4097u64, 10u64, 1u64, 3u8);
+    }
+
+    transition right_buffer_test() -> u64 {
+      let tiles_buffer: u64 = extract_tiles_buffer(4097u64);
+      return tiles_buffer;
     }
 }
