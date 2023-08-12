@@ -1,4 +1,4 @@
-program helloworld.aleo {
+program verdant_steel_legend_diamond.aleo {
     record board_state {
       owner: address,
       state_address: u128,
@@ -13,6 +13,12 @@ program helloworld.aleo {
     struct MoveResult {
       board: u64,
       points: u64
+    }
+
+    struct GenerateTileResult {
+      row: u64,
+      generated: bool,
+      last_tile: u8
     }
 
     struct MoveSign {
@@ -160,6 +166,20 @@ program helloworld.aleo {
       let tile: u64 = row & mask;  
       tile = tile >> 4u8.mul(index);
       return tile << shift;
+    }
+
+    inline set_tile(row: u64, index: u8, tile: u64) -> u64 {
+      let mask: u64 = 15u64 * 16u64.pow(index);
+      let empty: u64 = row & !(mask);  
+      tile = tile << 4u8.mul(index);
+      return row + tile;
+    }
+
+    inline set_row(board: u64, index: u8, row: u64) -> u64 {
+      let mask: u64 = 65535u64 * 65536u64.pow(index);
+      let empty: u64 = board & !(mask);  
+      row = row << 16u8.mul(index);
+      return board + row;
     }
 
     function flip_side(tiles: u64) -> u64 {
@@ -314,14 +334,74 @@ program helloworld.aleo {
       return (hash % (upper - lower + 1u64)) + lower;
     }
 
-    function generate_tile(board: board_state) -> board_state {
+    inline generate_tile_row(row: u64, chance: u64, tile: u64) -> GenerateTileResult {
+      let tile0: u64 = extract_tile(row, 3u8, 12u8);
+      let tile1: u64 = extract_tile(row, 2u8, 8u8);
+      let tile2: u64 = extract_tile(row, 1u8, 4u8);
+      let tile3: u64 = extract_tile(row, 0u8, 0u8);
+      let generated: bool = false;
+      let last_tile: u8 = 99u8;
+
+      if (tile3 == 0u64) {last_tile = 3u8;}
+      else if (tile2 == 0u64) {last_tile = 2u8;}
+      else if (tile1 == 0u64) {last_tile = 1u8;}
+      else if (tile0 == 0u64) {last_tile = 0u8;}
+
+      if (tile0 == 0u64 && get_pseudorandom_number(tile0, 10u64, 0u64) < chance) { tile0 = tile << 12u8; generated = true; }
+      else if (tile2 == 0u64 && get_pseudorandom_number(tile2, 10u64, 0u64) < chance) { tile2 = tile << 8u8; generated = true; }
+      else if (tile1 == 0u64 && get_pseudorandom_number(tile1, 10u64, 0u64) < chance) { tile1 = tile << 4u8; generated = true; }
+      else if (tile3 == 0u64 && get_pseudorandom_number(tile3, 10u64, 0u64) < chance) { tile3 = tile; generated = true; }
+
+      return GenerateTileResult { row: tile0 + tile1 + tile2 + tile3, generated: generated, last_tile: last_tile };
+    }
+
+    transition generate_tile(board: board_state) -> board_state {
       assert(board.game_state == 2u8);
       let tile: u64 = 1u64;
       if (board.move % 10u16 == 0u16) { tile = 2u64; };
 
-      let hashed_obj: MoveResult = MoveResult {board: board.board.sub_wrapped(board.points), points: board.points};
-      let random_x: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(board), 4u64, 0u64);
-      let random_y: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(hashed_obj), 4u64, 0u64);
+      let chance: u64 = get_pseudorandom_number(Pedersen128::hash_to_u64(board), 10u64, 0u64);
+      if (chance < 2u64) { tile = 2u64; } // 10% chance to get 4
+
+      let index: field = 0field;
+      let generated: bool = false;
+      let last_tile: u8 = 99u8;
+      let last_row: field = 99field;
+      let generated_row: GenerateTileResult = GenerateTileResult {row: 0u64, generated: false, last_tile: 99u8};
+      
+      let new_board: u64 = 0u64;
+      for i: u8 in 0u8..4u8 {
+        if (!generated) {
+          let row: GenerateTileResult = generate_tile_row(extract_row(board.board, index), chance, tile);
+          generated = row.generated;
+
+          if (generated) { generated_row = row; }
+          else if (row.last_tile != 99u8) {
+            last_tile = row.last_tile;
+            last_row = index;
+          }
+
+          index += 1field;
+        }
+      }
+
+      if (!generated) {
+        let new_row: u64 = extract_row(board.board, last_row);
+        new_row = set_tile(new_row, last_tile, tile);
+        new_board = set_row(board.board, last_row as u8, new_row);
+      }
+
+      let sign: MoveSign = MoveSign { board: new_board, prev_state_address: board.state_address, points: board.points, side: 5u8, player: board.owner, salt: new_board.sub_wrapped(board.points)};
+      return board_state {
+        owner: board.owner,
+        board: new_board,
+        state_address: Pedersen128::hash_to_u128(sign),
+        prev_state_address: board.state_address,
+        score: board.score,
+        points: board.points,
+        move: board.move,
+        game_state: 1u8
+      };
     }
 
     transition get_col(board: u64, index: u8) -> u64 {
