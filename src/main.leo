@@ -79,7 +79,7 @@ program game_2048.aleo {
       return (tile0, tile1, tile2, tile3);
     }
 
-    
+    // Extracts buffer (tiles without spacing) (from right to left)
     inline extract_tiles_buffer(tiles: u64) -> u64 {
       let tile0: u64 = 61440u64;
       let tile1: u64 = 3840u64;
@@ -121,6 +121,7 @@ program game_2048.aleo {
       return buffer;
     }
 
+    // Adds elements to buffer (to right)
     inline allocate_to_buffer_right(buffer: u64, tile: u64) -> u64 {
       let tile0: u64 = 61440u64;
       let tile1: u64 = 3840u64;
@@ -148,6 +149,7 @@ program game_2048.aleo {
       return tile0 + tile1 + tile2 + tile3;
     }
 
+    // Adds elements to buffer (to left)
     inline allocate_to_buffer_left(buffer: u64, tile: u64) -> u64 {
       let tile0: u64 = 61440u64;
       let tile1: u64 = 3840u64;
@@ -175,6 +177,7 @@ program game_2048.aleo {
       return tile0 + tile1 + tile2 + tile3;
     }
 
+    // Extracts a tile from a row using index beginning from right, also can be shifted by number of shift
     inline extract_tile(row: u64, index: u8, shift: u8) -> u64 {
       let mask: u64 = 15u64 * 16u64.pow(index);
       let tile: u64 = row & mask;  
@@ -182,6 +185,7 @@ program game_2048.aleo {
       return tile << shift;
     }
 
+    // Sets a tile in a row by index (beginning from right)
     inline set_tile(row: u64, index: u8, tile: u64) -> u64 {
       let mask: u64 = 15u64 * 16u64.pow(index);
       let flipped_mask: u64 = 18446744073709551615u64 - mask;
@@ -190,6 +194,7 @@ program game_2048.aleo {
       return row + tile;
     }
 
+    // Sets a row using index (beginning from the bottom of the board)
     inline set_row(board: u64, index: u8, row: u64) -> u64 {
       let mask: u64 = 65535u64 * 65536u64.pow(index);
       let flipped_mask: u64 = 18446744073709551615u64 - mask;
@@ -198,6 +203,7 @@ program game_2048.aleo {
       return board + row;
     }
 
+    // Flips the tiles to the left
     function flip_side(tiles: u64) -> u64 {
       let buffer: u64 = allocate_to_buffer_left(0u64, extract_tile(tiles, 3u8, 0u8));
       buffer = allocate_to_buffer_left(buffer, extract_tile(tiles, 2u8, 0u8));
@@ -207,6 +213,9 @@ program game_2048.aleo {
       return buffer;
     }
 
+    // Extracts column from the table by index, so the
+    // top element of the board will be left-most and
+    // bottom element of the board will be right-most
     function extract_column(board: u64, index: u8) -> u64 {
         let row0: u64 = extract_row(board, 3field);
         let row1: u64 = extract_row(board, 2field);
@@ -223,6 +232,8 @@ program game_2048.aleo {
         return col;
     }
 
+    // Moves tiles to right according to the
+    // 2048 game logic
     function move_tiles_right(tiles: u64) -> MoveResult {
       if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
       
@@ -266,6 +277,9 @@ program game_2048.aleo {
       return MoveResult { board: buffer, points: points };
     }
 
+    
+    // Moves tiles to left according to the
+    // 2048 game logic
     function move_tiles_left(tiles: u64) -> MoveResult {
       if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
 
@@ -307,6 +321,8 @@ program game_2048.aleo {
       return MoveResult { board: buffer, points: points };
     }
 
+    
+    // Converts cols back to rows (board)
     function cols_to_rows(col0: u64, col1: u64, col2: u64, col3: u64) -> u64 {
       let row0: u64 = extract_tile(col0, 3u8, 12u8);
       let row1: u64 = extract_tile(col0, 2u8, 12u8);
@@ -335,6 +351,7 @@ program game_2048.aleo {
       return row3 + row2 + row1 + row0;
     }
 
+    // Checking the winning condition
     function is_won(row0: u64, row1: u64, row2: u64, row3: u64) -> bool {
       return extract_tile(row0, 0u8, 0u8) == 11u64 || extract_tile(row0, 1u8, 0u8) == 11u64 || extract_tile(row0, 2u8, 0u8) == 11u64 || extract_tile(row0, 3u8, 0u8) == 11u64
       || extract_tile(row1, 0u8, 0u8) == 11u64 || extract_tile(row1, 1u8, 0u8) == 11u64 || extract_tile(row1, 2u8, 0u8) == 11u64 || extract_tile(row1, 3u8, 0u8) == 11u64
@@ -342,6 +359,7 @@ program game_2048.aleo {
       || extract_tile(row3, 0u8, 0u8) == 11u64 || extract_tile(row3, 1u8, 0u8) == 11u64 || extract_tile(row3, 2u8, 0u8) == 11u64 || extract_tile(row3, 3u8, 0u8) == 11u64;
     }
 
+    // Check if the tiles are mergeable or empty (so it's not the losing position)
     function is_mergeable_or_empty(tiles: u64) -> bool {
       let tiles_buffer: u64 = extract_tiles_buffer(tiles);
       let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
@@ -352,6 +370,7 @@ program game_2048.aleo {
       return tile0 == 0u64 || tile1 == 0u64 || tile2 == 0u64 || tile3 == 0u64 || (tile0 == tile1) || (tile1 == tile2) || (tile2 == tile3);
     }
 
+    // Get a combined hash from board, player and salt
     function get_hash(board: u64, player: address, salt: u64) -> u128 {
       let hash0: u16 = Poseidon8::hash_to_u16(Sign64 {num: board});
       let hash1: u16 = Poseidon8::hash_to_u16(player);
@@ -360,10 +379,13 @@ program game_2048.aleo {
       return Poseidon8::hash_to_u128(Sign {sign0: hash0, sign1: hash1, sign2: hash2});
     }
 
+    // Generate pseudonumber form hash and range, as random functions
+    // work only in a finalize functions, putting restrictions on the code
     inline get_pseudorandom_number(hash: u64, upper: u64, lower: u64) -> u64 {
       return (hash % (upper - lower + 1u64)) + lower;
     }
 
+    // Generates a new tile (2 or 4) in a row with some chance
     function generate_tile_row(row: u64, chance: u64, tile: u64, index: u8) -> GenerateTileResult {
       let tile0: u64 = extract_tile(row, 3u8, 0u8);
       let tile1: u64 = extract_tile(row, 2u8, 0u8);
@@ -389,10 +411,12 @@ program game_2048.aleo {
       return GenerateTileResult { row: tile0 + tile1 + tile2 + tile3, generated: generated, index: index, last_tile: last_tile };
     }
     
+    // Generates a tile using a board state with a finished movement
+    // so it returns the state with the updated board and a new tile
     transition generate_tile(board: board_state) -> board_state {
       assert(board.game_state == 2u8); // Board state should be pending a tile
       let tile: u64 = 1u64;
-      if (board.move % 10u16 == 0u16) { tile = 2u64; } // Get 2 every tenth move
+      if (board.move % 10u16 == 0u16) { tile = 2u64; } // Get 2 every tenth move (10% chance simulation)
 
       let chance: u64 = get_pseudorandom_number(Poseidon8::hash_to_u64(board), 10u64, 0u64);
 
@@ -486,6 +510,7 @@ program game_2048.aleo {
         return move_tiles_right(tiles);
     }
 
+    // Creates a new game for a player to play
     transition init_game() -> board_state {
       return board_state {
         owner: self.caller,
@@ -508,6 +533,9 @@ program game_2048.aleo {
       }
     }
 
+    // Moves a board to some direction according
+    // to the 2048 game logic returning a state
+    // with the updated board after movement
     // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
     transition move(board: board_state, side: u8) -> board_state {
       assert(board.owner == self.caller); // Check if the caller is the state owner
