@@ -1,318 +1,643 @@
-import board.leo;
-
 // The 'game_2048' program.
 program game_2048.aleo {
-    // Point class represents a single tile
-    struct Point {
-        x: u8,
-        y: u8,
-        val: u16
+    struct Player {
+      games_played: u64,
+      games_won: u64,
+      max_score: u64
     }
 
-    // Row class represents 4 tiles of a board
-    struct Row {
-        p0: Point,
-        p1: Point,
-        p2: Point,
-        p3: Point,
+    mapping players: address => Player;
+
+    record board_state {
+      owner: address,
+      state_address: u128,
+      prev_state_address: u128,
+      board: u64,
+      score: u64,
+      points: u64,
+      move: u16,
+      game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
     }
 
-    struct Buffer {
-        v0: u16,
-        v1: u16,
-        v2: u16,
-        v3: u16,
+    struct MoveResult {
+      board: u64,
+      points: u64
     }
 
-    // Board for the game consists of 4 rows
-    // This way making a matrix of 4x4 tiles
-    struct Board {
-        r0: Row,
-        r1: Row,
-        r2: Row,
-        r3: Row,
+    struct GenerateTileResult {
+      row: u64,
+      generated: bool,
+      index: u8,
+      last_tile: u8
     }
 
-    // Game session for the player which is
-    // stored in the mapping for all users
-    struct Game {
-        board: Board,
-        score: u16,
-        status: u8 // 0 - in play, 1 - won, 2 - lost
+    struct Sign64 {
+      num: u64
     }
 
-    // As Leo doesn't support normal arrays by
-    // default, there is a need to normalize
-    // the syntax by making the helper functions
-    // (But they don't look nice either)
-    //------------------------------------------------------------
-    /*inline create_empty_board() -> Board {
-        return Board {
-            r0: Row {p0: Point {x: 0u8, y: 0u8, val: 0u16}, p1: Point {x: 1u8, y: 0u8, val: 0u16}, p2: Point {x: 2u8, y: 0u8, val: 0u16}, p3: Point {x: 3u8, y: 0u8, val: 0u16}},
-            r1: Row {p0: Point {x: 0u8, y: 1u8, val: 0u16}, p1: Point {x: 1u8, y: 1u8, val: 0u16}, p2: Point {x: 2u8, y: 1u8, val: 0u16}, p3: Point {x: 3u8, y: 1u8, val: 0u16}},
-            r2: Row {p0: Point {x: 0u8, y: 2u8, val: 0u16}, p1: Point {x: 1u8, y: 2u8, val: 0u16}, p2: Point {x: 2u8, y: 2u8, val: 0u16}, p3: Point {x: 3u8, y: 2u8, val: 0u16}},
-            r3: Row {p0: Point {x: 0u8, y: 3u8, val: 0u16}, p1: Point {x: 1u8, y: 3u8, val: 0u16}, p2: Point {x: 2u8, y: 3u8, val: 0u16}, p3: Point {x: 3u8, y: 3u8, val: 0u16}}
-        };
+    struct Sign {
+      sign0: u16,
+      sign1: u16,
+      sign2: u16
     }
 
-    function create_empty_game(score: u16) -> Game {
-        return Game { board: create_empty_board(), score: score, status: 0u8};
+    // Extracts row from the board by index (from right to left)
+    inline extract_row(board: u64, index: field) -> u64 {
+        let row3_mask: u64 = 65535u64;
+        let row2_mask: u64 = 4294901760u64;
+        let row1_mask: u64 = 281470681743360u64;
+        let row0_mask: u64 = 18446462598732840960u64;
+        let row: u64 = board;
+
+        if (index == 0field) {row &= row3_mask;}
+        else if (index == 1field) {row &= row2_mask;}
+        else if (index == 2field) {row &= row1_mask;}
+        else {row &= row0_mask;}
+
+        let shift_mask: u16 = (index * 16field) as u16;
+        row = row >> shift_mask;
+
+        return row;
     }
 
-    inline get_row_by_index(board: Board, index: u8) -> Row {
-        if (index == 0u8) {
-            return board.r0;
-        } else if (index == 1u8) {
-            return board.r1;
-        } else if (index == 2u8) {
-            return board.r2;
-        }
+    // Extracts individual tiles from row (from left to right)
+    inline extract_tiles(row: u64) -> (u64, u64, u64, u64) {
+      let tile0: u64 = 61440u64;
+      let tile1: u64 = 3840u64;
+      let tile2: u64 = 240u64;
+      let tile3: u64 = 15u64;
+
+      tile0 = row & tile0;
+      tile1 = row & tile1;
+      tile2 = row & tile2;
+      tile3 = row & tile3;
+
+      tile0 = tile0 >> 12u8;
+      tile1 = tile1 >> 8u8;
+      tile2 = tile2 >> 4u8;
+
+      return (tile0, tile1, tile2, tile3);
+    }
+
+    
+    inline extract_tiles_buffer(tiles: u64) -> u64 {
+      let tile0: u64 = 61440u64;
+      let tile1: u64 = 3840u64;
+      let tile2: u64 = 240u64;
+      let tile3: u64 = 15u64;
+
+      tile0 = tiles & tile0;
+      tile1 = tiles & tile1;
+      tile2 = tiles & tile2;
+      tile3 = tiles & tile3;
+
+      tile0 = tile0 >> 12u8;
+      tile1 = tile1 >> 8u8;
+      tile2 = tile2 >> 4u8;
+
+      let buffer: u64 = 0u64;
+      let tile_counter: u8 = 0u8;
+      let shift: u64 = 0u64;
+
+      if (tile3 != 0u64) {
+        buffer += tile3;
+        tile_counter += 1u8;
+      }
+      if (tile2 != 0u64) {
+        shift = tile2 << 4u8.mul(tile_counter);
+        buffer += shift;
+        tile_counter += 1u8;
+      }
+      if (tile1 != 0u64) {
+        shift = tile1 << 4u8.mul(tile_counter);
+        buffer += shift;
+        tile_counter += 1u8;
+      }
+      if (tile0 != 0u64) {
+        shift = tile0 << 4u8.mul(tile_counter);
+        buffer += shift;
+      }
+
+      return buffer;
+    }
+
+    inline allocate_to_buffer_right(buffer: u64, tile: u64) -> u64 {
+      let tile0: u64 = 61440u64;
+      let tile1: u64 = 3840u64;
+      let tile2: u64 = 240u64;
+      let tile3: u64 = 15u64;
+
+      tile0 = buffer & tile0;
+      tile1 = buffer & tile1;
+      tile2 = buffer & tile2;
+      tile3 = buffer & tile3;
+
+      tile2 = tile2 >> 4u8;
+      tile1 = tile1 >> 8u8;
+      tile0 = tile0 >> 12u8;
+
+      if (tile3 == 0u64) { tile3 = tile; }
+      else if (tile2 == 0u64) { tile2 = tile; }
+      else if (tile1 == 0u64) { tile1 = tile; }
+      else if (tile0 == 0u64) { tile0 = tile; }
+
+      tile2 = tile2 << 4u8;
+      tile1 = tile1 << 8u8;
+      tile0 = tile0 << 12u8;
+
+      return tile0 + tile1 + tile2 + tile3;
+    }
+
+    inline allocate_to_buffer_left(buffer: u64, tile: u64) -> u64 {
+      let tile0: u64 = 61440u64;
+      let tile1: u64 = 3840u64;
+      let tile2: u64 = 240u64;
+      let tile3: u64 = 15u64;
+
+      tile0 = buffer & tile0;
+      tile1 = buffer & tile1;
+      tile2 = buffer & tile2;
+      tile3 = buffer & tile3;
+
+      tile2 = tile2 >> 4u8;
+      tile1 = tile1 >> 8u8;
+      tile0 = tile0 >> 12u8;
+
+      if (tile0 == 0u64) { tile0 = tile; }
+      else if (tile1 == 0u64) { tile1 = tile; }
+      else if (tile2 == 0u64) { tile2 = tile; }
+      else if (tile3 == 0u64) { tile3 = tile; }
+
+      tile2 = tile2 << 4u8;
+      tile1 = tile1 << 8u8;
+      tile0 = tile0 << 12u8;
+
+      return tile0 + tile1 + tile2 + tile3;
+    }
+
+    inline extract_tile(row: u64, index: u8, shift: u8) -> u64 {
+      let mask: u64 = 15u64 * 16u64.pow(index);
+      let tile: u64 = row & mask;  
+      tile = tile >> 4u8.mul(index);
+      return tile << shift;
+    }
+
+    inline set_tile(row: u64, index: u8, tile: u64) -> u64 {
+      let mask: u64 = 15u64 * 16u64.pow(index);
+      let flipped_mask: u64 = 18446744073709551615u64 - mask;
+      let empty: u64 = row & flipped_mask;
+      tile = tile << 4u8.mul(index);
+      return row + tile;
+    }
+
+    inline set_row(board: u64, index: u8, row: u64) -> u64 {
+      let mask: u64 = 65535u64 * 65536u64.pow(index);
+      let flipped_mask: u64 = 18446744073709551615u64 - mask;
+      let empty: u64 = row & flipped_mask;  
+      row = row << 16u8.mul(index);
+      return board + row;
+    }
+
+    function flip_side(tiles: u64) -> u64 {
+      let buffer: u64 = allocate_to_buffer_left(0u64, extract_tile(tiles, 3u8, 0u8));
+      buffer = allocate_to_buffer_left(buffer, extract_tile(tiles, 2u8, 0u8));
+      buffer = allocate_to_buffer_left(buffer, extract_tile(tiles, 1u8, 0u8));
+      buffer = allocate_to_buffer_left(buffer, extract_tile(tiles, 0u8, 0u8));
+
+      return buffer;
+    }
+
+    function extract_column(board: u64, index: u8) -> u64 {
+        let row0: u64 = extract_row(board, 3field);
+        let row1: u64 = extract_row(board, 2field);
+        let row2: u64 = extract_row(board, 1field);
+        let row3: u64 = extract_row(board, 0field);
+
+        let col: u64 = 0u64;
+
+        col += extract_tile(row3, index, 0u8);
+        col += extract_tile(row2, index, 4u8);
+        col += extract_tile(row1, index, 8u8);
+        col += extract_tile(row0, index, 12u8);
+
+        return col;
+    }
+
+    function move_tiles_right(tiles: u64) -> MoveResult {
+      if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
+      
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
+      let buffer: u64 = 0u64;
+
+      assert(tiles_buffer != 17u64);
+      let points: u64 = 0u64;
         
-        return board.r3;
-    }
-
-    inline get_point_by_index(row: Row, index: u8) -> Point {
-        if (index == 0u8) {
-            return row.p0;
-        } else if (index == 1u8) {
-            return row.p1;
-        } else if (index == 2u8) {
-            return row.p2;
-        }
-        
-        return row.p3;
-    }
-    inline set_point_val(board: Board, i: u8, j: u8, val: u16) -> Board {
-        //------------------------------------------------------------
-        // Unpacking the vals
-        //------------------------------------------------------------
-        let r0p0: u16 = board.r0.p0.val;
-        let r0p1: u16 = board.r0.p0.val;
-        let r0p2: u16 = board.r0.p0.val;
-        let r0p3: u16 = board.r0.p0.val;
-        
-        let r1p0: u16 = board.r0.p0.val;
-        let r1p1: u16 = board.r0.p0.val;
-        let r1p2: u16 = board.r0.p0.val;
-        let r1p3: u16 = board.r0.p0.val;
-
-        let r2p0: u16 = board.r0.p0.val;
-        let r2p1: u16 = board.r0.p0.val;
-        let r2p2: u16 = board.r0.p0.val;
-        let r2p3: u16 = board.r0.p0.val;
-
-        let r3p0: u16 = board.r0.p0.val;
-        let r3p1: u16 = board.r0.p0.val;
-        let r3p2: u16 = board.r0.p0.val;
-        let r3p3: u16 = board.r0.p0.val;
-        //------------------------------------------------------------
-        // Updating the val
-        //------------------------------------------------------------
-        if (i == 0u8) {
-            if (j == 0u8) {
-                r0p0 = val;
-            } else if (j == 1u8) {
-                r0p1 = val;
-            } else if (j == 1u8) {
-                r0p2 = val;
-            } else {
-                r0p3 = val;
-            }
-        } else if (i == 1u8) {
-            if (j == 0u8) {
-                r1p0 = val;
-            } else if (j == 1u8) {
-                r1p1 = val;
-            } else if (j == 1u8) {
-                r1p2 = val;
-            } else {
-                r1p3 = val;
-            }
-        }
-        if (i == 2u8) {
-            if (j == 0u8) {
-                r2p0 = val;
-            } else if (j == 1u8) {
-                r2p1 = val;
-            } else if (j == 1u8) {
-                r2p2 = val;
-            } else {
-                r2p3 = val;
-            }
+      if (tile0 == tile1 && tile0 != 0u64) {
+        buffer = allocate_to_buffer_right(buffer, tile0 + 1u64);
+        points += tile0 + tile1;
+        if (tile2 == tile3 && tile2 != 0u64) {
+          points += tile2 + tile3;
+          buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
         } else {
-            if (j == 0u8) {
-                r3p0 = val;
-            } else if (j == 1u8) {
-                r3p1 = val;
-            } else if (j == 1u8) {
-                r3p2 = val;
-            } else {
-                r3p3 = val;
-            }
+          buffer = allocate_to_buffer_right(buffer, tile2);
+          buffer = allocate_to_buffer_right(buffer, tile3);
         }
-        //------------------------------------------------------------
-        // Packing the board back
-        //------------------------------------------------------------
-        return Board {
-            r0: Row {p0: Point {x: 0u8, y: 0u8, val: r0p0}, p1: Point {x: 1u8, y: 0u8, val: r0p1}, p2: Point {x: 2u8, y: 0u8, val: r0p2}, p3: Point {x: 3u8, y: 0u8, val: r0p3}},
-            r1: Row {p0: Point {x: 0u8, y: 1u8, val: r1p0}, p1: Point {x: 1u8, y: 1u8, val: r1p1}, p2: Point {x: 2u8, y: 1u8, val: r1p2}, p3: Point {x: 3u8, y: 1u8, val: r1p3}},
-            r2: Row {p0: Point {x: 0u8, y: 2u8, val: r2p0}, p1: Point {x: 1u8, y: 2u8, val: r2p1}, p2: Point {x: 2u8, y: 2u8, val: r2p2}, p3: Point {x: 3u8, y: 2u8, val: r2p3}},
-            r3: Row {p0: Point {x: 0u8, y: 3u8, val: r3p0}, p1: Point {x: 1u8, y: 3u8, val: r3p1}, p2: Point {x: 2u8, y: 3u8, val: r3p2}, p3: Point {x: 3u8, y: 3u8, val: r3p3}}
-        };
+      } else if (tile1 == tile2 && tile1 != 0u64) {
+        points += tile1 + tile2;
+        buffer = allocate_to_buffer_right(buffer, tile0);
+        buffer = allocate_to_buffer_right(buffer, tile1 + 1u64);
+        buffer = allocate_to_buffer_right(buffer, tile3);
+      } else if (tile2 == tile3 && tile2 != 0u64) {
+        points += tile2 + tile3;
+        buffer = allocate_to_buffer_right(buffer, tile0);
+        buffer = allocate_to_buffer_right(buffer, tile1);
+        buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
+      } else {
+        buffer = allocate_to_buffer_right(buffer, tile0);
+        buffer = allocate_to_buffer_right(buffer, tile1);
+        buffer = allocate_to_buffer_right(buffer, tile2);
+        buffer = allocate_to_buffer_right(buffer, tile3);
+      }
+
+      return MoveResult { board: buffer, points: points };
     }
 
-    inline pack_board(row0: Buffer, row1: Buffer, row2: Buffer, row3: Buffer) -> Board {
-        return Board {
-            r0: Row {p0: Point {x: 0u8, y: 0u8, val: row0.v0}, p1: Point {x: 1u8, y: 0u8, val: row0.v1}, p2: Point {x: 2u8, y: 0u8, val: row0.v2}, p3: Point {x: 3u8, y: 0u8, val: row0.v3}},
-            r1: Row {p0: Point {x: 0u8, y: 1u8, val: row1.v0}, p1: Point {x: 1u8, y: 1u8, val: row1.v1}, p2: Point {x: 2u8, y: 1u8, val: row1.v2}, p3: Point {x: 3u8, y: 1u8, val: row1.v3}},
-            r2: Row {p0: Point {x: 0u8, y: 2u8, val: row2.v0}, p1: Point {x: 1u8, y: 2u8, val: row2.v1}, p2: Point {x: 2u8, y: 2u8, val: row2.v2}, p3: Point {x: 3u8, y: 2u8, val: row2.v3}},
-            r3: Row {p0: Point {x: 0u8, y: 3u8, val: row3.v0}, p1: Point {x: 1u8, y: 3u8, val: row3.v1}, p2: Point {x: 2u8, y: 3u8, val: row3.v2}, p3: Point {x: 3u8, y: 3u8, val: row3.v3}}
-        };
-    }
+    function move_tiles_left(tiles: u64) -> MoveResult {
+      if (tiles == 0u64) { return MoveResult { board: tiles, points: 0u64 }; } // Don't move if empty
 
-    inline pack_board_cols(col0: Buffer, col1: Buffer, col2: Buffer, col3: Buffer) -> Board {
-        return Board {
-            r0: Row {p0: Point {x: 0u8, y: 0u8, val: col0.v0}, p1: Point {x: 1u8, y: 0u8, val: col1.v0}, p2: Point {x: 2u8, y: 0u8, val: col2.v0}, p3: Point {x: 3u8, y: 0u8, val: col3.v0}},
-            r1: Row {p0: Point {x: 0u8, y: 1u8, val: col0.v1}, p1: Point {x: 1u8, y: 1u8, val: col1.v1}, p2: Point {x: 2u8, y: 1u8, val: col2.v1}, p3: Point {x: 3u8, y: 1u8, val: col3.v1}},
-            r2: Row {p0: Point {x: 0u8, y: 2u8, val: col0.v2}, p1: Point {x: 1u8, y: 2u8, val: col1.v2}, p2: Point {x: 2u8, y: 2u8, val: col2.v2}, p3: Point {x: 3u8, y: 2u8, val: col3.v2}},
-            r3: Row {p0: Point {x: 0u8, y: 3u8, val: col0.v3}, p1: Point {x: 1u8, y: 3u8, val: col1.v3}, p2: Point {x: 2u8, y: 3u8, val: col2.v3}, p3: Point {x: 3u8, y: 3u8, val: col3.v3}}
-        };
-    }
-
-    inline create_filled_buffer(val: u16) -> Buffer {
-        return Buffer {v0: val, v1: val, v2: val, v3: val};
-    }
-
-    // Allocates a val to the closest empty space
-    inline allocate_to_buffer(buffer: Buffer, element: u16) -> Buffer {
-        assert(buffer.v0 == 0u16 || buffer.v1 == 0u16 || buffer.v2 == 0u16 || buffer.v3 == 0u16);
-        if (buffer.v0 == 0u16) {
-            return Buffer {v0: element, v1: 0u16, v2: 0u16, v3: 0u16};
-        }
-        if (buffer.v1 == 0u16) {
-            return Buffer {v0: buffer.v0, v1: element, v2: 0u16, v3: 0u16};
-        }
-        if (buffer.v2 == 0u16) {
-            return Buffer {v0: buffer.v0, v1: buffer.v1, v2: element, v3: 0u16};
-        }
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
+      let buffer: u64 = 0u64;
+      let points: u64 = 0u64;
         
-        return Buffer {v0: buffer.v0, v1: buffer.v1, v2: buffer.v2, v3: element};
-    }
-
-    // Allocates a val to the end empty space
-    inline allocate_to_end_buffer(buffer: Buffer, element: u16) -> Buffer {
-        assert(buffer.v0 == 0u16 || buffer.v1 == 0u16 || buffer.v2 == 0u16 || buffer.v3 == 0u16);
-        if (buffer.v3 == 0u16) {
-            return Buffer {v0: 0u16, v1: 0u16, v2: 0u16, v3: element};
+      if (tile3 == tile2 && tile3 != 0u64) {
+        buffer = allocate_to_buffer_left(buffer, tile3 + 1u64);
+        points += tile3 + tile2;
+        if (tile1 == tile0 && tile1 != 0u64) {
+          points += tile1 + tile0;
+          buffer = allocate_to_buffer_left(buffer, tile1 + 1u64);
+        } else {
+          buffer = allocate_to_buffer_left(buffer, tile1);
+          buffer = allocate_to_buffer_left(buffer, tile0);
         }
-        if (buffer.v2 == 0u16) {
-            return Buffer {v0: 0u16, v1: 0u16, v2: element, v3: buffer.v3};
+      } else if (tile2 == tile1 && tile2 != 0u64) {
+        points += tile2 + tile1;
+        buffer = allocate_to_buffer_left(buffer, tile3);
+        buffer = allocate_to_buffer_left(buffer, tile2 + 1u64);
+        buffer = allocate_to_buffer_left(buffer, tile0);
+      } else if (tile1 == tile0 && tile1 != 0u64) {
+        points += tile1 + tile0;
+        buffer = allocate_to_buffer_left(buffer, tile3);
+        buffer = allocate_to_buffer_left(buffer, tile2);
+        buffer = allocate_to_buffer_left(buffer, tile1 + 1u64);
+      } else {
+        buffer = allocate_to_buffer_left(buffer, tile3);
+        buffer = allocate_to_buffer_left(buffer, tile2);
+        buffer = allocate_to_buffer_left(buffer, tile1);
+        buffer = allocate_to_buffer_left(buffer, tile0);
+      }
+
+      return MoveResult { board: buffer, points: points };
+    }
+
+    function cols_to_rows(col0: u64, col1: u64, col2: u64, col3: u64) -> u64 {
+      let row0: u64 = extract_tile(col0, 3u8, 12u8);
+      let row1: u64 = extract_tile(col0, 2u8, 12u8);
+      let row2: u64 = extract_tile(col0, 1u8, 12u8);
+      let row3: u64 = extract_tile(col0, 0u8, 12u8);
+
+      row0 += extract_tile(col1, 3u8, 8u8);
+      row1 += extract_tile(col1, 2u8, 8u8);
+      row2 += extract_tile(col1, 1u8, 8u8);
+      row3 += extract_tile(col1, 0u8, 8u8);
+
+      row0 += extract_tile(col2, 3u8, 4u8);
+      row1 += extract_tile(col2, 2u8, 4u8);
+      row2 += extract_tile(col2, 1u8, 4u8);
+      row3 += extract_tile(col2, 0u8, 4u8);
+
+      row0 += extract_tile(col3, 3u8, 0u8);
+      row1 += extract_tile(col3, 2u8, 0u8);
+      row2 += extract_tile(col3, 1u8, 0u8);
+      row3 += extract_tile(col3, 0u8, 0u8);
+
+      row2 = row2 << 16u8;
+      row1 = row1 << 32u8;
+      row0 = row0 << 48u8;
+
+      return row3 + row2 + row1 + row0;
+    }
+
+    function is_won(row0: u64, row1: u64, row2: u64, row3: u64) -> bool {
+      return extract_tile(row0, 0u8, 0u8) == 11u64 || extract_tile(row0, 1u8, 0u8) == 11u64 || extract_tile(row0, 2u8, 0u8) == 11u64 || extract_tile(row0, 3u8, 0u8) == 11u64
+      || extract_tile(row1, 0u8, 0u8) == 11u64 || extract_tile(row1, 1u8, 0u8) == 11u64 || extract_tile(row1, 2u8, 0u8) == 11u64 || extract_tile(row1, 3u8, 0u8) == 11u64
+      || extract_tile(row2, 0u8, 0u8) == 11u64 || extract_tile(row2, 1u8, 0u8) == 11u64 || extract_tile(row2, 2u8, 0u8) == 11u64 || extract_tile(row2, 3u8, 0u8) == 11u64
+      || extract_tile(row3, 0u8, 0u8) == 11u64 || extract_tile(row3, 1u8, 0u8) == 11u64 || extract_tile(row3, 2u8, 0u8) == 11u64 || extract_tile(row3, 3u8, 0u8) == 11u64;
+    }
+
+    function is_mergeable_or_empty(tiles: u64) -> bool {
+      let tiles_buffer: u64 = extract_tiles_buffer(tiles);
+      let tile0: u64 = extract_tile(tiles_buffer, 0u8, 0u8);
+      let tile1: u64 = extract_tile(tiles_buffer, 1u8, 0u8);
+      let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
+      let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
+
+      return tile0 == 0u64 || tile1 == 0u64 || tile2 == 0u64 || tile3 == 0u64 || (tile0 == tile1) || (tile1 == tile2) || (tile2 == tile3);
+    }
+
+    function get_hash(board: u64, player: address, salt: u64) -> u128 {
+      let hash0: u16 = Poseidon8::hash_to_u16(Sign64 {num: board});
+      let hash1: u16 = Poseidon8::hash_to_u16(player);
+      let hash2: u16 = Poseidon8::hash_to_u16(Sign64 {num: salt});
+      
+      return Poseidon8::hash_to_u128(Sign {sign0: hash0, sign1: hash1, sign2: hash2});
+    }
+
+    inline get_pseudorandom_number(hash: u64, upper: u64, lower: u64) -> u64 {
+      return (hash % (upper - lower + 1u64)) + lower;
+    }
+
+    function generate_tile_row(row: u64, chance: u64, tile: u64, index: u8) -> GenerateTileResult {
+      let tile0: u64 = extract_tile(row, 3u8, 0u8);
+      let tile1: u64 = extract_tile(row, 2u8, 0u8);
+      let tile2: u64 = extract_tile(row, 1u8, 0u8);
+      let tile3: u64 = extract_tile(row, 0u8, 0u8);
+      let generated: bool = false;
+      let last_tile: u8 = 99u8;
+
+      if (tile3 == 0u64) {last_tile = 3u8;}
+      else if (tile2 == 0u64) {last_tile = 2u8;}
+      else if (tile1 == 0u64) {last_tile = 1u8;}
+      else if (tile0 == 0u64) {last_tile = 0u8;}
+
+      if (tile0 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile0 + chance), 10u64, 0u64) < chance) { tile0 = tile; generated = true; }
+      else if (tile2 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile2 + chance), 10u64, 0u64) < chance) { tile2 = tile; generated = true; }
+      else if (tile1 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile1 + chance), 10u64, 0u64) < chance) { tile1 = tile; generated = true; }
+      else if (tile3 == 0u64 && get_pseudorandom_number(Poseidon8::hash_to_u64(tile3 + chance), 10u64, 0u64) < chance) { tile3 = tile; generated = true; }
+
+      tile0 = tile0 << 12u8;
+      tile1 = tile1 << 8u8;
+      tile2 = tile2 << 4u8;
+
+      return GenerateTileResult { row: tile0 + tile1 + tile2 + tile3, generated: generated, index: index, last_tile: last_tile };
+    }
+    
+    transition generate_tile(board: board_state) -> board_state {
+      assert(board.game_state == 2u8); // Board state should be pending a tile
+      let tile: u64 = 1u64;
+      if (board.move % 10u16 == 0u16) { tile = 2u64; } // Get 2 every tenth move
+
+      let chance: u64 = get_pseudorandom_number(Poseidon8::hash_to_u64(board), 10u64, 0u64);
+
+      let index: field = 0field;
+      let generated: bool = false;
+      let last_tile: u8 = 99u8;
+      let last_row: field = 99field;
+      let generated_row: GenerateTileResult = GenerateTileResult {row: 0u64, generated: false, index: 99u8, last_tile: 99u8};
+      
+      let new_board: u64 = 0u64;
+      for i: u8 in 0u8..4u8 {
+        if (!generated) {
+          let row: GenerateTileResult = generate_tile_row(extract_row(board.board, index), chance, tile, index as u8);
+
+          if (row.generated) { 
+            generated = row.generated;
+            generated_row = row; 
+          } else if (row.last_tile != 99u8) {
+            last_tile = row.last_tile;
+            last_row = index;
+          }
+
+          index += 1field;
         }
-        if (buffer.v1 == 0u16) {
-            return Buffer {v0: 0u16, v1: element, v2: buffer.v2, v3: buffer.v3};
+      }
+
+      if (generated) {
+        new_board = set_row(board.board, generated_row.index, generated_row.row);
+      }
+      else {
+        let new_row: u64 = extract_row(board.board, last_row);
+        new_row = set_tile(new_row, last_tile, tile);
+        new_board = set_row(board.board, last_row as u8, new_row);
+      }
+
+      return board_state {
+        owner: board.owner,
+        board: new_board,
+        state_address: get_hash(new_board, board.owner, new_board.sub_wrapped(board.score)),
+        prev_state_address: board.state_address,
+        score: board.score,
+        points: board.points,
+        move: board.move,
+        game_state: 1u8
+      };
+    }
+
+    transition generate_tile_row_test() -> GenerateTileResult {
+      return generate_tile_row(37280u64, 10u64, 1u64, 0u8); // 37024
+    }
+
+    transition pseudonumber_test() -> u64 {
+      return get_pseudorandom_number(45782136139006u64, 10u64, 0u64);
+    }
+
+    transition set_row_test(board: u64, index: u8, row: u64) -> u64 {
+      return set_row(board, index, row);
+    }
+
+    transition set_tile_test(row: u64, index: u8, tile: u64) -> u64 {
+      return set_tile(row, index, tile);
+    }
+
+    transition get_col(board: u64, index: u8) -> u64 {
+        return extract_column(board, index);
+    }
+
+    transition get_row(board: u64, index: field) -> u64 {
+        return extract_row(board, index);
+    }
+
+    transition get_tiles(board: u64) -> (u64, u64, u64, u64) {
+        let row: u64 = extract_row(board, 3field);
+        let tiles: (u64, u64, u64, u64) = extract_tiles(row);
+        return tiles;
+    }
+
+    transition get_buffer(tiles: u64) -> u64 {
+        return extract_tiles_buffer(tiles);
+    }
+
+    transition buffer_left() -> u64 {
+        return allocate_to_buffer_left(63072u64, 5u64);
+    }
+
+    transition get_tiles_left(tiles: u64) -> MoveResult {
+        return move_tiles_left(tiles);
+    }
+
+    transition get_tiles_right(tiles: u64) ->  MoveResult {
+        return move_tiles_right(tiles);
+    }
+
+    transition init_game() -> board_state {
+      return board_state {
+        owner: self.caller,
+        board: 0u64,
+        state_address: get_hash(0u64, self.caller, 6u64),
+        prev_state_address: 0u128,
+        score: 0u64,
+        points: 0u64,
+        move: 6u16,
+        game_state: 0u8
+      } then finalize(self.caller);
+    }
+
+    finalize init_game(caller: address) {
+      let player: Player = Mapping::get_or_use(players, caller, Player {games_played: 0u64, games_won: 0u64, max_score: 0u64});
+      if (player.games_played == 0u64) {
+        Mapping::set(players, caller, Player {games_played: 1u64, games_won: 0u64, max_score: 0u64});
+      } else {
+        Mapping::set(players, caller, Player {games_played: player.games_played + 1u64, games_won: 0u64, max_score: 0u64});
+      }
+    }
+
+    // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
+    transition move(board: board_state, side: u8) -> board_state {
+      assert(board.owner == self.caller); // Check if the caller is the state owner
+      assert(board.game_state < 2u8); // Check if the game is not finished and has a new tile
+      let opposite: bool = side == 2u8 || side == 3u8;
+      let new_board: u64 = 0u64;
+      let game_state: u8 = 2u8;
+      let points: u64 = 0u64;
+
+      if (board.board != 0u64) {
+        if (side == 0u8) { // top
+          let col0: MoveResult = move_tiles_left(extract_column(board.board, 3u8));
+          let col1: MoveResult = move_tiles_left(extract_column(board.board, 2u8));
+          let col2: MoveResult = move_tiles_left(extract_column(board.board, 1u8));
+          let col3: MoveResult = move_tiles_left(extract_column(board.board, 0u8));
+
+          if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+        } else if (side == 2u8) { // bottom
+          let col0: MoveResult = move_tiles_right(extract_column(board.board, 3u8));
+          let col1: MoveResult = move_tiles_right(extract_column(board.board, 2u8));
+          let col2: MoveResult = move_tiles_right(extract_column(board.board, 1u8));
+          let col3: MoveResult = move_tiles_right(extract_column(board.board, 0u8));
+
+          if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+        } else if (side == 1u8) { // right
+          let row0: MoveResult = move_tiles_right(extract_row(board.board, 3field));
+          let row1: MoveResult = move_tiles_right(extract_row(board.board, 2field));
+          let row2: MoveResult = move_tiles_right(extract_row(board.board, 1field));
+          let row3: MoveResult = move_tiles_right(extract_row(board.board, 0field));
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = row0.points + row1.points + row2.points + row3.points;
+
+          let row2_shifted: u64 = row2.board << 16u8;
+          let row1_shifted: u64 = row1.board << 32u8;
+          let row0_shifted: u64 = row0.board << 48u8;
+          new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
+        } else { // left
+          let row0: MoveResult = move_tiles_left(extract_row(board.board, 3field));
+          let row1: MoveResult = move_tiles_left(extract_row(board.board, 2field));
+          let row2: MoveResult = move_tiles_left(extract_row(board.board, 1field));
+          let row3: MoveResult = move_tiles_left(extract_row(board.board, 0field));
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
+
+          points = row0.points + row1.points + row2.points + row3.points;
+
+          let row2_shifted: u64 = row2.board << 16u8;
+          let row1_shifted: u64 = row1.board << 32u8;
+          let row0_shifted: u64 = row0.board << 48u8;
+          new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
         }
-        
-        return Buffer {v0: element, v1: buffer.v1, v2: buffer.v2, v3: buffer.v3};
+
+        assert(new_board != board.board); // Check if the movement is valid
+      }
+
+      return board_state {
+        owner: board.owner,
+        board: new_board,
+        state_address: get_hash(new_board, board.owner, new_board.sub_wrapped(points)),
+        prev_state_address: board.state_address,
+        score: board.score + points,
+        points: points,
+        move: board.move + 1u16,
+        game_state: game_state
+      } then finalize(board.owner, board.score + points, game_state);
     }
 
-    // Puts the spaces where are needed depending on the
-    // movement side so all the buffer blocks go in there
-    // Side options: 0 - top, 1 - right, 2 - bottom, 3 - left
-    inline get_spaced_buffer(buffer: Buffer, side: u8) -> Buffer {
-        let new_buffer: Buffer = create_filled_buffer(0u16);
-        if (side == 1u8 || side == 2u8) {
-            if (buffer.v3 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v3);}
-            if (buffer.v2 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v2);}
-            if (buffer.v1 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v1);}
-            if (buffer.v0 > 0u16) {new_buffer = allocate_to_end_buffer(new_buffer, buffer.v0);}
-        }
-
-        return new_buffer;
+    finalize move(caller: address, score: u64, game_state: u8) {
+      let player: Player = Mapping::get_or_use(players, caller, Player {games_played: 0u64, games_won: 0u64, max_score: 9999999999u64});
+      let new_score: u64 = player.max_score;
+      if (score > player.max_score) { new_score = score; }
+      assert(player.max_score < 9999999999u64); // Check if player exists
+      if (game_state == 3u8) { // Won
+        Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won + 1u64, max_score: new_score});
+      } else { // Lost or in progress
+        Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won, max_score: new_score});
+      }
     }
 
-    // Calculates buffer movement: 0 - top, 1 - right, 2 - bottom, 3 - left
-    // if buffer is a column, first element is considered the highest
-    function calculate_buffer(buffer: Buffer, side: u8) -> Buffer {
-        let new_buffer: Buffer = create_filled_buffer(0u16);
+    transition row_move_test() -> (u64, u64, u64, u64) {
+      let board: u64 = 1152921504606846976u64;
+      let row0: MoveResult = move_tiles_right(extract_row(board, 3field));
+      let row1: MoveResult = move_tiles_right(extract_row(board, 2field));
+      let row2: MoveResult = move_tiles_right(extract_row(board, 1field));
+      let row3: MoveResult = move_tiles_right(extract_row(board, 0field));
 
-        if (buffer.v0 == buffer.v1) {
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v0 * 2u16);
-            if (buffer.v2 == buffer.v3) { new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16); }
-            else { 
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v2);
-                new_buffer = allocate_to_buffer(new_buffer, buffer.v3);
-            }
-        } else if (buffer.v1 == buffer.v2) {
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v1 * 2u16);
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v3);
-        } else if (buffer.v2 == buffer.v3) {
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v0);
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v1);
-            new_buffer = allocate_to_buffer(new_buffer, buffer.v2 * 2u16);
-        }
-
-        new_buffer = get_spaced_buffer(new_buffer, side);
-
-        return new_buffer;
+      let row2_shifted: u64 = row2.board << 16u8;
+      let row1_shifted: u64 = row1.board << 32u8;
+      let row0_shifted: u64 = row0.board << 48u8;
+      return (row0_shifted, row1_shifted, row2_shifted, row3.board);
     }
 
-    inline row_to_buffer(row: Row) -> Buffer {
-      return Buffer {v0: row.p0.val, v1: row.p1.val, v2: row.p2.val, v3: row.p3.val};
+    transition generate_tile_row_test() -> GenerateTileResult {
+      return generate_tile_row(4097u64, 10u64, 1u64, 3u8);
     }
 
-    //------------------------------------------------------------
-    // Main Game Logic
-    //------------------------------------------------------------
-
-    mapping games: address => Game;
-
-    transition init_game() -> Game {
-        let empty_game: Game = create_empty_game(0u16);
-        return empty_game then finalize(self.caller, empty_game);
+    transition right_buffer_test() -> u64 {
+      let tiles_buffer: u64 = extract_tiles_buffer(4097u64);
+      return tiles_buffer;
     }
-
-    finalize init_game(caller: address, game: Game) {
-        assert(!Mapping::contains(games, caller) || Mapping::get(games, caller).status != 0u8);
-        Mapping::set(games, caller, game);
-    }
-
-    transition make_move(side: u8) -> Game {
-        assert(Mapping::contains(games, caller));
-        let current_game: Game = Mapping::get(games, self.caller);
-        let board: Board = current_game.board;
-
-        if (side == 0u8 || side == 2u8) { // vertical
-          let col0: Buffer = Buffer {v0: board.r0.p0.val, v1: board.r1.p0.val, v2: board.r2.p0.val, v3: board.r3.p0.val};
-          let col1: Buffer = Buffer {v0: board.r0.p1.val, v1: board.r1.p1.val, v2: board.r2.p1.val, v3: board.r3.p1.val};
-          let col2: Buffer = Buffer {v0: board.r0.p2.val, v1: board.r1.p2.val, v2: board.r2.p2.val, v3: board.r3.p2.val};
-          let col3: Buffer = Buffer {v0: board.r0.p3.val, v1: board.r1.p3.val, v2: board.r2.p3.val, v3: board.r3.p3.val};
-
-          col0 = calculate_buffer(col0, side);
-          col1 = calculate_buffer(col1, side);
-          col2 = calculate_buffer(col2, side);
-          col3 = calculate_buffer(col3, side);
-
-          board = pack_board_cols(col0, col1, col2, col3);
-        } else { // horizontal
-          let row0: Buffer = row_to_buffer(board.r0);
-          let row1: Buffer = row_to_buffer(board.r1);
-          let row2: Buffer = row_to_buffer(board.r2);
-          let row3: Buffer = row_to_buffer(board.r3);
-
-          row0 = calculate_buffer(row0, side);
-          row1 = calculate_buffer(row1, side);
-          row2 = calculate_buffer(row2, side);
-          row3 = calculate_buffer(row3, side);
-
-          board = pack_board(row0, row1, row2, row3);
-        }
-
-        return current_game then finalize(board, current_game, self.caller);
-    }
-
-    finalize make_move(board: Board, game: Game, caller: address) {
-        game = Game {board: board, score: game.score, status: game.status};
-        Mapping::set(games, caller, game);
-    }*/
 }
