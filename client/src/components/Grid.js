@@ -1,16 +1,44 @@
-import styled from 'styled-components'
+import styled from 'styled-components';
+import { useSelector, useDispatch } from 'react-redux'
+import { decrement, increment } from '../features/gridSlice';
+import Tile from './Tile';
 
 
-const Button = styled.button``
+const Canvas = styled.div`
+  border-radius: 3px;
+  height: 33.33vw;
+`;
 
-function App() {
+const Row = styled.div`
+  height: 25%;
+`;
+
+function Grid(props) {
+  const count = useSelector(state => state.grid.value);
+  const dispatch = useDispatch();
   return (
-    <div className="App">
-      <main>
-        
-      </main>
-    </div>
+    <Canvas>
+        <button
+          aria-label="Increment value"
+          onClick={() => dispatch(increment())}
+        >
+          Increment</button>
+          <button
+          aria-label="Decrement value"
+          onClick={() => dispatch(decrement())}
+        >
+          Decrement
+        </button>
+        <h1>Value: {count}</h1>
+        {props.tile_data.map((row, i) => {
+          return <Row className='row' key={i}>
+            {row.map((tile, j) => 
+              <Tile power={tile} key={(i, j)}/>
+            )}
+          </Row>
+        })}
+    </Canvas>
   );
 }
 
-export default App;
+export default Grid;
