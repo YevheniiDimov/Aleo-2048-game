@@ -70,6 +70,63 @@ public tiles: u64 = 4097u64; // 0001 0000 0000 0001
 //                        real: 
 
 
+
+/* Board with winning condition
+0000 0000 0000 0000 
+0000 0000 0000 1011 
+0000 0000 0000 0000
+0000 0000 0000 0000
+*/
+
+/* Board without winning condition
+0001 0000 0100 0000 
+0000 0000 0000 0000 
+0000 0010 0000 0000
+0000 0000 0000 1000
+*/
+[win_condition_test]
+//public board: u64 = 47244640256u64; 
+//                    expected: true
+//                        real: true
+
+public board: u64 = 1170935903149883400u64; 
+//                    expected: false
+//                        real: false
+
+/* Board with lose condition
+0001 0010 0001 0010
+0010 0001 0010 0001
+0001 0010 0001 0010
+0010 0001 0010 0001
+*/
+
+/* Board without lose condition
+0001 0010 0001 0010
+0010 0001 0001 0001
+0001 0010 0001 0010
+0010 0001 0010 0001
+*/
+
+/* Board without lose condition
+0001 0010 0001 0010
+0010 0001 0010 0001
+0001 0000 0000 0010
+0010 0001 0010 0001
+*/
+
+[lose_condition_test]
+//public board: u64 = 1302139668184310049u64; 
+//                    expected: true
+//                        real: true
+
+//public board: u64 = 1302139599464833313u64; 
+//                    expected: false
+//                        real: false
+
+//public board: u64 = 1302139668149707041u64; 
+//                    expected: false
+//                        real: false
+
 /* Board
 0001 0000 0000 0001
 0000 0001 0001 0000

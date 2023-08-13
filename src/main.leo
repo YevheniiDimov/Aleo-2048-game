@@ -736,11 +736,23 @@ program game_2048.aleo {
     }
 
     transition lose_condition_test(board: u64) -> bool {
-      let row0: u64 = extract_row(board, 3field);
-      let row1: u64 = extract_row(board, 2field);
-      let row2: u64 = extract_row(board, 1field);
-      let row3: u64 = extract_row(board, 0field);
+      for i: u8 in 0u8..4u8 {
+         let col: u64 = extract_column(board, i);
+         if (is_mergeable_or_empty(col)) {
+          return false;
+         }
+      }
 
-      return is_won(row0, row1, row2, row3);
+      let index: field = 0field;
+      for i: u8 in 0u8..4u8 {
+         let row: u64 = extract_row(board, index);
+         if (is_mergeable_or_empty(row)) {
+          return false;
+         }
+
+         index += 1field;
+      }
+
+      return true;
     }
 }
