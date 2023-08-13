@@ -39,14 +39,14 @@ program game_2048.aleo {
     // record which is directly connected to a
     // player and a previous state
     record board_state {
-      public owner: address,
-      public state_address: u128,
-      public prev_state_address: u128,
-      public board: u64,
-      public score: u64,
-      public points: u64,
-      public move: u16,
-      public game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
+      owner: address,
+      state_address: u128,
+      prev_state_address: u128,
+      board: u64,
+      score: u64,
+      points: u64,
+      move: u16,
+      game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
     }
 
     struct MoveResult {
@@ -581,72 +581,100 @@ program game_2048.aleo {
           let col2: MoveResult = move_tiles_left(extract_column(board.board, 1u8));
           let col3: MoveResult = move_tiles_left(extract_column(board.board, 0u8));
 
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+
           if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
           else {
+            let row0: u64 = extract_row(new_board, 3field);
+            let row1: u64 = extract_row(new_board, 2field);
+            let row2: u64 = extract_row(new_board, 1field);
+            let row3: u64 = extract_row(new_board, 0field);
+
             let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
-            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board) ||
+            is_mergeable_or_empty(row0) || is_mergeable_or_empty(row1)
+            || is_mergeable_or_empty(row2) || is_mergeable_or_empty(row3);
 
             if (!is_movable) { game_state = 4u8; }
           }
-
-          points = col0.points + col1.points + col2.points + col3.points;
-          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
         } else if (side == 2u8) { // bottom
           let col0: MoveResult = move_tiles_right(extract_column(board.board, 3u8));
           let col1: MoveResult = move_tiles_right(extract_column(board.board, 2u8));
           let col2: MoveResult = move_tiles_right(extract_column(board.board, 1u8));
           let col3: MoveResult = move_tiles_right(extract_column(board.board, 0u8));
 
+          points = col0.points + col1.points + col2.points + col3.points;
+          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
+
           if (is_won(col0.board, col1.board, col2.board, col3.board)) { game_state = 3u8; }
           else {
+            let row0: u64 = extract_row(new_board, 3field);
+            let row1: u64 = extract_row(new_board, 2field);
+            let row2: u64 = extract_row(new_board, 1field);
+            let row3: u64 = extract_row(new_board, 0field);
+
             let is_movable: bool = is_mergeable_or_empty(col0.board) || is_mergeable_or_empty(col1.board)
-            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board);
+            || is_mergeable_or_empty(col2.board) || is_mergeable_or_empty(col3.board) ||
+            is_mergeable_or_empty(row0) || is_mergeable_or_empty(row1)
+            || is_mergeable_or_empty(row2) || is_mergeable_or_empty(row3);
 
             if (!is_movable) { game_state = 4u8; }
           }
-
-          points = col0.points + col1.points + col2.points + col3.points;
-          new_board = cols_to_rows(col0.board, col1.board, col2.board, col3.board);
         } else if (side == 1u8) { // right
           let row0: MoveResult = move_tiles_right(extract_row(board.board, 3field));
           let row1: MoveResult = move_tiles_right(extract_row(board.board, 2field));
           let row2: MoveResult = move_tiles_right(extract_row(board.board, 1field));
           let row3: MoveResult = move_tiles_right(extract_row(board.board, 0field));
 
-          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
-          else {
-            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
-            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
-
-            if (!is_movable) { game_state = 4u8; }
-          }
-
           points = row0.points + row1.points + row2.points + row3.points;
 
           let row2_shifted: u64 = row2.board << 16u8;
           let row1_shifted: u64 = row1.board << 32u8;
           let row0_shifted: u64 = row0.board << 48u8;
           new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let col0: u64 = extract_column(new_board, 3u8);
+            let col1: u64 = extract_column(new_board, 2u8);
+            let col2: u64 = extract_column(new_board, 1u8);
+            let col3: u64 = extract_column(new_board, 0u8);
+
+            let is_movable: bool = is_mergeable_or_empty(col0) || is_mergeable_or_empty(col1)
+            || is_mergeable_or_empty(col2) || is_mergeable_or_empty(col3) ||
+            is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
         } else { // left
           let row0: MoveResult = move_tiles_left(extract_row(board.board, 3field));
           let row1: MoveResult = move_tiles_left(extract_row(board.board, 2field));
           let row2: MoveResult = move_tiles_left(extract_row(board.board, 1field));
           let row3: MoveResult = move_tiles_left(extract_row(board.board, 0field));
 
-          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
-          else {
-            let is_movable: bool = is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
-            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
-
-            if (!is_movable) { game_state = 4u8; }
-          }
-
           points = row0.points + row1.points + row2.points + row3.points;
 
           let row2_shifted: u64 = row2.board << 16u8;
           let row1_shifted: u64 = row1.board << 32u8;
           let row0_shifted: u64 = row0.board << 48u8;
           new_board = row3.board + row2_shifted + row1_shifted + row0_shifted;
+
+          if (is_won(row0.board, row1.board, row2.board, row3.board)) { game_state = 3u8; }
+          else {
+            let col0: u64 = extract_column(new_board, 3u8);
+            let col1: u64 = extract_column(new_board, 2u8);
+            let col2: u64 = extract_column(new_board, 1u8);
+            let col3: u64 = extract_column(new_board, 0u8);
+
+            let is_movable: bool = is_mergeable_or_empty(col0) || is_mergeable_or_empty(col1)
+            || is_mergeable_or_empty(col2) || is_mergeable_or_empty(col3) ||
+            is_mergeable_or_empty(row0.board) || is_mergeable_or_empty(row1.board)
+            || is_mergeable_or_empty(row2.board) || is_mergeable_or_empty(row3.board);
+
+            if (!is_movable) { game_state = 4u8; }
+          }
         }
 
         assert(new_board != board.board); // Check if the movement is valid
@@ -696,5 +724,23 @@ program game_2048.aleo {
     transition right_buffer_test() -> u64 {
       let tiles_buffer: u64 = extract_tiles_buffer(4097u64);
       return tiles_buffer;
+    }
+
+    transition win_condition_test(board: u64) -> bool {
+      let row0: u64 = extract_row(board, 3field);
+      let row1: u64 = extract_row(board, 2field);
+      let row2: u64 = extract_row(board, 1field);
+      let row3: u64 = extract_row(board, 0field);
+
+      return is_won(row0, row1, row2, row3);
+    }
+
+    transition lose_condition_test(board: u64) -> bool {
+      let row0: u64 = extract_row(board, 3field);
+      let row1: u64 = extract_row(board, 2field);
+      let row2: u64 = extract_row(board, 1field);
+      let row3: u64 = extract_row(board, 0field);
+
+      return is_won(row0, row1, row2, row3);
     }
 }
