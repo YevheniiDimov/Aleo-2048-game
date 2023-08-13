@@ -1,5 +1,32 @@
 // The 'game_2048' program.
 program game_2048.aleo {
+    // As Aleo import functionality is in active development and will
+    // be changed in the future (not stable), as well as the imported
+    // leo files have issues with importing inline functions, it was 
+    // decided to put everything into one file, which is not a good
+    // practice, but prevents the integration issues
+
+    // As Aleo does not provide unit built-in testing functionality,
+    // I will use the mixed approach of unit testing and manual
+    // testing, using the transitions and inputs with changing different
+    // patterns so I can emulate some of the game process whilst 
+    // sticking to the validations of the smallest separate units
+
+    // Initially I tried to use struct-oriented approach, as I was
+    // experienced in the OOP before, but then after seeing the
+    // battleship example I understood that I should use the binary
+    // and mathematical approaches, so it will be more efficient and
+    // readable. The logic is to create different record of board
+    // states connecting to each other. The validation of those can
+    // be traced on the blockchain, as if two states connect to the
+    // one, only the most early one is valid. The board_states have
+    // hash as own identificators, which help to create a snapshot
+    // of a particular state for a particular player. If two states
+    // are not valid because of the unrealistic outcome, it also
+    // can be traced, so the cheating player can be identified
+
+    // Player account structure, stores statistics
+    // of the player which can be used for leaderboards
     struct Player {
       games_played: u64,
       games_won: u64,
@@ -8,15 +35,18 @@ program game_2048.aleo {
 
     mapping players: address => Player;
 
+    // Describes a board state, stored as a
+    // record which is directly connected to a
+    // player and a previous state
     record board_state {
-      owner: address,
-      state_address: u128,
-      prev_state_address: u128,
-      board: u64,
-      score: u64,
-      points: u64,
-      move: u16,
-      game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
+      public owner: address,
+      public state_address: u128,
+      public prev_state_address: u128,
+      public board: u64,
+      public score: u64,
+      public points: u64,
+      public move: u16,
+      public game_state: u8 // 0 - started, 1 - in progress, 2 - pending tile, 3 - won, 4 - lost
     }
 
     struct MoveResult {
@@ -244,7 +274,6 @@ program game_2048.aleo {
       let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
 
-      assert(tiles_buffer != 17u64);
       let points: u64 = 0u64;
         
       if (tile0 == tile1 && tile0 != 0u64) {
