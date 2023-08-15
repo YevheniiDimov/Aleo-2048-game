@@ -493,52 +493,6 @@ program game_2048.aleo {
       };
     }
 
-    transition generate_tile_row_test() -> GenerateTileResult {
-      return generate_tile_row(37280u64, 10u64, 1u64, 0u8); // 37024
-    }
-
-    transition pseudonumber_test() -> u64 {
-      return get_pseudorandom_number(45782136139006u64, 10u64, 0u64);
-    }
-
-    transition set_row_test(board: u64, index: u8, row: u64) -> u64 {
-      return set_row(board, index, row);
-    }
-
-    transition set_tile_test(row: u64, index: u8, tile: u64) -> u64 {
-      return set_tile(row, index, tile);
-    }
-
-    transition get_col(board: u64, index: u8) -> u64 {
-        return extract_column(board, index);
-    }
-
-    transition get_row(board: u64, index: field) -> u64 {
-        return extract_row(board, index);
-    }
-
-    transition get_tiles(board: u64) -> (u64, u64, u64, u64) {
-        let row: u64 = extract_row(board, 3field);
-        let tiles: (u64, u64, u64, u64) = extract_tiles(row);
-        return tiles;
-    }
-
-    transition get_buffer(tiles: u64) -> u64 {
-        return extract_tiles_buffer(tiles);
-    }
-
-    transition buffer_left() -> u64 {
-        return allocate_to_buffer_left(63072u64, 5u64);
-    }
-
-    transition get_tiles_left(tiles: u64) -> MoveResult {
-        return move_tiles_left(tiles);
-    }
-
-    transition get_tiles_right(tiles: u64) ->  MoveResult {
-        return move_tiles_right(tiles);
-    }
-
     // Creates a new game for a player to play
     transition init_game() -> board_state {
       return board_state {
@@ -702,57 +656,5 @@ program game_2048.aleo {
       } else { // Lost or in progress
         Mapping::set(players, caller, Player {games_played: player.games_played, games_won: player.games_won, max_score: new_score});
       }
-    }
-
-    transition row_move_test() -> (u64, u64, u64, u64) {
-      let board: u64 = 1152921504606846976u64;
-      let row0: MoveResult = move_tiles_right(extract_row(board, 3field));
-      let row1: MoveResult = move_tiles_right(extract_row(board, 2field));
-      let row2: MoveResult = move_tiles_right(extract_row(board, 1field));
-      let row3: MoveResult = move_tiles_right(extract_row(board, 0field));
-
-      let row2_shifted: u64 = row2.board << 16u8;
-      let row1_shifted: u64 = row1.board << 32u8;
-      let row0_shifted: u64 = row0.board << 48u8;
-      return (row0_shifted, row1_shifted, row2_shifted, row3.board);
-    }
-
-    transition generate_tile_row_test() -> GenerateTileResult {
-      return generate_tile_row(4097u64, 10u64, 1u64, 3u8);
-    }
-
-    transition right_buffer_test() -> u64 {
-      let tiles_buffer: u64 = extract_tiles_buffer(4097u64);
-      return tiles_buffer;
-    }
-
-    transition win_condition_test(board: u64) -> bool {
-      let row0: u64 = extract_row(board, 3field);
-      let row1: u64 = extract_row(board, 2field);
-      let row2: u64 = extract_row(board, 1field);
-      let row3: u64 = extract_row(board, 0field);
-
-      return is_won(row0, row1, row2, row3);
-    }
-
-    transition lose_condition_test(board: u64) -> bool {
-      for i: u8 in 0u8..4u8 {
-         let col: u64 = extract_column(board, i);
-         if (is_mergeable_or_empty(col)) {
-          return false;
-         }
-      }
-
-      let index: field = 0field;
-      for i: u8 in 0u8..4u8 {
-         let row: u64 = extract_row(board, index);
-         if (is_mergeable_or_empty(row)) {
-          return false;
-         }
-
-         index += 1field;
-      }
-
-      return true;
     }
 }
