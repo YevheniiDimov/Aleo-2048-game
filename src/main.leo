@@ -128,23 +128,27 @@ program game_2048.aleo {
       let buffer: u64 = 0u64;
       let tile_counter: u8 = 0u8;
       let shift: u64 = 0u64;
+      let positions: u8 = 0u8;
 
       if (tile3 != 0u64) {
         buffer += tile3;
         tile_counter += 1u8;
       }
       if (tile2 != 0u64) {
-        shift = tile2 << 4u8.mul(tile_counter);
+        positions = tile_counter * 4u8;
+        shift = tile2 << positions;
         buffer += shift;
         tile_counter += 1u8;
       }
       if (tile1 != 0u64) {
-        shift = tile1 << 4u8.mul(tile_counter);
+        positions = tile_counter * 4u8;
+        shift = tile1 << positions;
         buffer += shift;
         tile_counter += 1u8;
       }
       if (tile0 != 0u64) {
-        shift = tile0 << 4u8.mul(tile_counter);
+        positions = tile_counter * 4u8;
+        shift = tile0 << positions;
         buffer += shift;
       }
 
@@ -566,7 +570,7 @@ program game_2048.aleo {
     // to the 2048 game logic returning a state
     // with the updated board after movement
     // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
-    transition move(board: board_state, side: u8) -> board_state {
+    transition move_tiles(board: board_state, side: u8) -> board_state {
       assert(board.owner == self.caller); // Check if the caller is the state owner
       assert(board.game_state < 2u8); // Check if the game is not finished and has a new tile
       let opposite: bool = side == 2u8 || side == 3u8;
@@ -642,7 +646,7 @@ program game_2048.aleo {
       } then finalize(board.owner, board.score + points, game_state);
     }
 
-    finalize move(caller: address, score: u64, game_state: u8) {
+    finalize move_tiles(caller: address, score: u64, game_state: u8) {
       let player: Player = Mapping::get_or_use(players, caller, Player {games_played: 0u64, games_won: 0u64, max_score: 9999999999u64});
       let new_score: u64 = player.max_score;
       if (score > player.max_score) { new_score = score; }
