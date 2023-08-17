@@ -125,34 +125,31 @@ program game_2048.aleo {
       tile1 = tile1 >> 8u8;
       tile2 = tile2 >> 4u8;
 
-      let buffer: u64 = 0u64;
-      let tile_counter: u8 = 0u8;
-      let shift: u64 = 0u64;
-      let positions: u8 = 0u8;
-
-      if (tile3 != 0u64) {
-        buffer += tile3;
-        tile_counter += 1u8;
-      }
       if (tile2 != 0u64) {
-        positions = tile_counter * 4u8;
-        shift = tile2 << positions;
-        buffer += shift;
-        tile_counter += 1u8;
-      }
-      if (tile1 != 0u64) {
-        positions = tile_counter * 4u8;
-        shift = tile1 << positions;
-        buffer += shift;
-        tile_counter += 1u8;
-      }
-      if (tile0 != 0u64) {
-        positions = tile_counter * 4u8;
-        shift = tile0 << positions;
-        buffer += shift;
+        if (tile3 != 0u64) {
+          tile2 = tile2 << 4u8;
+        }
       }
 
-      return buffer;
+      if (tile1 != 0u64) {
+        if (tile3 != 0u64) {
+          if (tile2 != 0u64) {
+            tile1 = tile1 << 8u8;
+          } else { tile1 = tile1 << 4u8; }
+        }
+      }
+
+      if (tile0 != 0u64) {
+        if (tile3 != 0u64) {
+          if (tile2 != 0u64) {
+            if (tile1 != 0u64) {
+              tile0 = tile0 << 12u8;
+            } else { tile0 = tile0 << 8u8; }
+          } else { tile0 = tile0 << 4u8; }
+        }
+      }
+
+      return tile0 + tile1 + tile2 + tile3;
     }
 
     // Adds elements to buffer (to right)
@@ -278,25 +275,30 @@ program game_2048.aleo {
       let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
 
+      let tile_sum: u64 = 0u64;
       let points: u64 = 0u64;
         
       if (tile0 == tile1 && tile0 != 0u64) {
         buffer = allocate_to_buffer_right(buffer, tile0 + 1u64);
-        points += tile0 + tile1;
+        tile_sum = tile0 + tile1;
+        points = points + tile_sum;
         if (tile2 == tile3 && tile2 != 0u64) {
-          points += tile2 + tile3;
+          tile_sum = tile2 + tile3;
+          points = points + tile_sum;
           buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
         } else {
           buffer = allocate_to_buffer_right(buffer, tile2);
           buffer = allocate_to_buffer_right(buffer, tile3);
         }
       } else if (tile1 == tile2 && tile1 != 0u64) {
-        points += tile1 + tile2;
+        tile_sum = tile1 + tile2;
+        points = points + tile_sum;
         buffer = allocate_to_buffer_right(buffer, tile0);
         buffer = allocate_to_buffer_right(buffer, tile1 + 1u64);
         buffer = allocate_to_buffer_right(buffer, tile3);
       } else if (tile2 == tile3 && tile2 != 0u64) {
-        points += tile2 + tile3;
+        tile_sum = tile2 + tile3;
+        points = points + tile_sum;
         buffer = allocate_to_buffer_right(buffer, tile0);
         buffer = allocate_to_buffer_right(buffer, tile1);
         buffer = allocate_to_buffer_right(buffer, tile2 + 1u64);
@@ -322,25 +324,31 @@ program game_2048.aleo {
       let tile2: u64 = extract_tile(tiles_buffer, 2u8, 0u8);
       let tile3: u64 = extract_tile(tiles_buffer, 3u8, 0u8);
       let buffer: u64 = 0u64;
+      
+      let tile_sum: u64 = 0u64;
       let points: u64 = 0u64;
         
       if (tile3 == tile2 && tile3 != 0u64) {
         buffer = allocate_to_buffer_left(buffer, tile3 + 1u64);
-        points += tile3 + tile2;
+        tile_sum = tile3 + tile2;
+        points = points + tile_sum;
         if (tile1 == tile0 && tile1 != 0u64) {
-          points += tile1 + tile0;
+          tile_sum = tile1 + tile0;
+          points = points + tile_sum;
           buffer = allocate_to_buffer_left(buffer, tile1 + 1u64);
         } else {
           buffer = allocate_to_buffer_left(buffer, tile1);
           buffer = allocate_to_buffer_left(buffer, tile0);
         }
       } else if (tile2 == tile1 && tile2 != 0u64) {
-        points += tile2 + tile1;
+        tile_sum = tile2 + tile1;
+        points = points + tile_sum;
         buffer = allocate_to_buffer_left(buffer, tile3);
         buffer = allocate_to_buffer_left(buffer, tile2 + 1u64);
         buffer = allocate_to_buffer_left(buffer, tile0);
       } else if (tile1 == tile0 && tile1 != 0u64) {
-        points += tile1 + tile0;
+        tile_sum = tile1 + tile0;
+        points = points + tile_sum;
         buffer = allocate_to_buffer_left(buffer, tile3);
         buffer = allocate_to_buffer_left(buffer, tile2);
         buffer = allocate_to_buffer_left(buffer, tile1 + 1u64);
