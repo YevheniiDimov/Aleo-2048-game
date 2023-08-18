@@ -18,7 +18,7 @@ function Grid(props) {
   const count = useSelector(state => state.grid.value);
   const dispatch = useDispatch();
   return (
-    <Canvas>
+    <div>
         <button
           aria-label="Increment value"
           onClick={() => dispatch(increment())}
@@ -30,15 +30,16 @@ function Grid(props) {
         >
           Decrement
         </button>
-        <h1>Value: {count}</h1>
-        {props.tile_data.map((row, i) => {
-          return <Row className='row' key={i}>
-            {row.map((tile, j) => 
-              <Tile power={tile} key={(i, j)}/>
-            )}
-          </Row>
-        })}
-    </Canvas>
+        <Canvas>
+          {props.tile_data.map((row, i) => {
+            return <Row className='row' key={i}>
+              {row.map((tile, j) => 
+                <Tile power={tile} key={(i, j)}/>
+              )}
+            </Row>
+          })}
+      </Canvas>
+    </div>
   );
 }
 

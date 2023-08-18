@@ -1,3 +1,4 @@
+'use client'
 import styled from 'styled-components';
 
 const TileColors = {
@@ -30,6 +31,9 @@ const Block = styled.div.attrs(props => ({
 function Tile(props) {
   let block_color = TileColors[props.power];
   let text_color = props.power === 0 ? block_color : 'white';
+  if (props.power === 1) {
+    text_color = 'black';
+  }
 
   return (
     <Block color={block_color} text_color={text_color} className='col-3'>

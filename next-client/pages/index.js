@@ -1,37 +1,13 @@
-import styled from 'styled-components';
-import Grid from '@/components/Grid';
-
-const HeaderLink = styled.div`
-  font-size: 1.25em;
-  font-weight: bolder;
-  color: white;
-  opacity: 50%;
-  transition: 0.1s ease-in;
-
-  &:hover {
-    opacity: 100%;
-    cursor: pointer;
-  }
-`;
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function Home() {
-  const fill_data = [
-    [0, 4, 8, 0],
-    [4, 1, 5, 10],
-    [0, 9, 2, 4],
-    [11, 7, 4, 3]
-  ];
-
   return (
-    <div className="App d-flex flex-column align-items-center bg-dark vh-100">
-        <header className="d-flex align-items-center p-3 w-100">
-          <h3 className='text-white'>Aleo 2048</h3>
-          <HeaderLink className='mx-5 header-button pb-1'>Your Account</HeaderLink>
-        </header>
-        <main className='col-4'>
-          <h3 className='text-white'>Your score: 0</h3>
-          <Grid tile_data={fill_data}/>
-        </main>
-    </div>
+    <main className='d-flex flex-column justify-content-center align-items-center text-white col-4'>
+      <p className='text-justify'>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Etiam sit amet nisl purus in. Quam adipiscing vitae proin sagittis nisl rhoncus mattis rhoncus. Volutpat lacus laoreet non curabitur. Eu ultrices vitae auctor eu augue ut lectus. Ornare massa eget egestas purus viverra accumsan in. Interdum posuere lorem ipsum dolor sit. Laoreet non curabitur gravida arcu ac. Sapien eget mi proin sed. Quis viverra nibh cras pulvinar mattis nunc sed blandit libero. Quis vel eros donec ac odio tempor orci. Sed risus ultricies tristique nulla aliquet enim.</p>
+      <p className='text-justify'>Vitae suscipit tellus mauris a diam. Dapibus ultrices in iaculis nunc. Scelerisque eu ultrices vitae auctor eu augue ut lectus arcu. Lectus magna fringilla urna porttitor. Platea dictumst vestibulum rhoncus est pellentesque. Eleifend quam adipiscing vitae proin. Proin libero nunc consequat interdum varius. Et malesuada fames ac turpis egestas maecenas pharetra convallis posuere. Turpis egestas integer eget aliquet nibh praesent tristique. Scelerisque viverra mauris in aliquam sem fringilla ut morbi tincidunt.</p>
+      <p className='text-justify'>Vel facilisis volutpat est velit egestas dui. Pellentesque elit eget gravida cum sociis natoque penatibus. Senectus et netus et malesuada fames ac turpis. Sit amet cursus sit amet. Cum sociis natoque penatibus et. Sed ullamcorper morbi tincidunt ornare massa eget egestas. Adipiscing elit ut aliquam purus sit amet luctus venenatis. Sit amet dictum sit amet justo donec enim diam. Nisl purus in mollis nunc. Nunc consequat interdum varius sit amet mattis vulputate enim. Diam sollicitudin tempor id eu nisl nunc mi ipsum faucibus. Fames ac turpis egestas maecenas pharetra convallis posuere morbi leo. Vitae ultricies leo integer malesuada nunc vel risus commodo. Nunc vel risus commodo viverra maecenas. Diam in arcu cursus euismod quis viverra nibh. Lectus nulla at volutpat diam ut venenatis tellus in.</p>
+      <p className='text-justify'>Amet massa vitae tortor condimentum lacinia. Nec feugiat nisl pretium fusce id. Duis at tellus at urna condimentum mattis pellentesque. Enim tortor at auctor urna nunc id cursus. Nisi porta lorem mollis aliquam ut porttitor leo a. Sociis natoque penatibus et magnis dis parturient. Ut morbi tincidunt augue interdum velit euismod. Mollis aliquam ut porttitor leo a diam sollicitudin tempor. Blandit cursus risus at ultrices mi tempus. Mi tempus imperdiet nulla malesuada pellentesque. Velit egestas dui id ornare arcu odio ut sem nulla. Massa tincidunt nunc pulvinar sapien et ligula. Urna nec tincidunt praesent semper. Et pharetra pharetra massa massa ultricies mi.</p>
+      <p className='text-justify'>Aliquet porttitor lacus luctus accumsan tortor. Consectetur a erat nam at lectus. Id consectetur purus ut faucibus pulvinar elementum. Cursus risus at ultrices mi tempus imperdiet nulla. Amet aliquam id diam maecenas ultricies mi eget mauris. Eu nisl nunc mi ipsum faucibus vitae aliquet nec. Egestas diam in arcu cursus euismod quis viverra nibh. Senectus et netus et malesuada. Pretium vulputate sapien nec sagittis aliquam malesuada. In hac habitasse platea dictumst. Id nibh tortor id aliquet lectus proin nibh. Est lorem ipsum dolor sit amet consectetur adipiscing. A condimentum vitae sapien pellentesque habitant morbi tristique senectus. Sapien faucibus et molestie ac feugiat sed lectus vestibulum mattis. Aliquam malesuada bibendum arcu vitae elementum. Egestas purus viverra accumsan in nisl nisi scelerisque.</p>
+    </main>
   );
 }
