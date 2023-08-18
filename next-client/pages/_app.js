@@ -9,6 +9,7 @@ import { Provider } from 'react-redux'
 import store from '@/store/store';
 import { useMemo, useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'tailwindcss/tailwind.css'
 import './app.css';
 
 require("@demox-labs/aleo-wallet-adapter-reactui/styles.css");
@@ -50,7 +51,7 @@ export default function App({ Component, pageProps }) {
             <Provider store={store}>
             <div className="App d-flex flex-column align-items-center bg-dark min-vh-100">
               <header className="d-flex align-items-center p-3 w-100">
-                <h3 className='text-white'>Aleo 2048</h3>
+                <h3 className='text-white text-2xl'>Aleo 2048</h3>
                 <HeaderLink className='header-button pb-1 me-5 ms-auto'>About</HeaderLink>
                 <WalletMultiButton className="bg-blue border-1 border rounded" />
               </header>

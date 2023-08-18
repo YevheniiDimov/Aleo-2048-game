@@ -1,11 +1,11 @@
 'use client'
-import Grid from '@/components/Grid';
 import { WalletNotConnectedError, WalletAdapterNetwork, Transaction } from "@demox-labs/aleo-wallet-adapter-base";
+import { setGameRecords, setCurrentGames, setLastTransaction } from '@/store/gridSlice';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { RefreshCcwDot, Play } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCreditRecords } from '@/store/walletSlice';
-import { setGameRecords, setCurrentGames, setLastTransaction } from '@/store/gridSlice';
+import GameSelect from "../components/GameSelect";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function NotEnoughCreditsException(message) {
@@ -17,9 +17,7 @@ function NotEnoughCreditsException(message) {
 
 export default function Game() {
   const credit_records = useSelector(state => state.wallet.credit_records);
-  const game_records = useSelector(state => state.grid.game_records);
-  const field = useSelector(state => state.grid.field);
-  const score = useSelector(state => state.grid.score);
+  const current_game_records = useSelector(state => state.grid.game_records);
   const last_transaction = useSelector(state => state.grid.last_transaction);
   const dispatch = useDispatch();
 
@@ -101,27 +99,23 @@ export default function Game() {
     <main className='col-4'>
       {publicKey ?
       <div>
-        {game_records.length > 0 ?
-          <div>
-            <h3 className='text-white'>Your score: {score}</h3>
-            <Grid tile_data={field} />
-          </div>
-        : <div className='text-center'>
+        {current_game_records.length > 0 ? <GameSelect />
+        : <div className='flex place-content-center'>
             { credit_records.length > 0 ? <div>
-                <h2 className='text-white'>Sync your Game Records:</h2>
-                <button className='btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-50'
+                <h2 className='text-white text-lg'>Sync your Game Records:</h2>
+                <button className='flex justify-content-between btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-100'
                 onClick={loadGameRecords}>
                   <RefreshCcwDot size={32} /> Sync Records
                 </button>
-                <h2 className='text-white mt-5'>Or start a new game:</h2>
-                <button className='btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-50'
+                <h2 className='text-white text-lg mt-5'>Or start a new game:</h2>
+                <button className='flex justify-content-between btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-100'
                 onClick={startNewGame}>
                   <Play size={32} /> Start a Game
                 </button>
               </div>
-            : <div>
-                <h2 className='text-white'>Sync your Credit Records:</h2>
-                <button className='btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-50'
+            : <div className='flex flex-column place-content-center'>
+                <h2 className='text-white text-lg'>Sync your Credit Records:</h2>
+                <button className='flex justify-content-between btn btn-dark btn-lg border border-1 border-white rounded mt-5 w-100'
                 onClick={loadCreditRecords}>
                   <RefreshCcwDot size={32} /> Sync Records
                 </button>
