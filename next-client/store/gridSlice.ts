@@ -1,27 +1,32 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { HYDRATE } from "next-redux-wrapper";
 
 export const gridSlice = createSlice({
   name: 'grid',
   initialState: {
     field: [
-        [0, 4, 8, 0],
-        [4, 1, 5, 10],
-        [0, 9, 2, 4],
-        [11, 7, 4, 3]
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
     ],
+    game_records: [],
+    current_games: [],
+    selected_game: null,
+    score: 0,
     value: 0
   },
   reducers: {
-    increment: (state) => {
-      state.value += 1;
-      console.log('Increment: ', state.value);
+    setGameRecords: (state, action) => {
+      state.game_records = action.payload.game_records;
     },
-    decrement: (state) => {
-      state.value -= 1;
+    setCurrentGames: (state, action) => {
+      state.current_games = action.payload.current_games;
+    },
+    setSelectedGame: (state, action) => {
+      state.selected_game = action.payload.selected_game;
     }
   }
 });
 
-export const { increment, decrement } = gridSlice.actions;
+export const { setGameRecords, setCurrentGames, setSelectedGame } = gridSlice.actions;
 export default gridSlice;

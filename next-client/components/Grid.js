@@ -1,7 +1,5 @@
 'use client'
 import styled from 'styled-components';
-import { useSelector, useDispatch } from 'react-redux'
-import { decrement, increment } from '@/store/gridSlice';
 import Tile from './Tile';
 
 
@@ -15,31 +13,16 @@ const Row = styled.div`
 `;
 
 function Grid(props) {
-  const count = useSelector(state => state.grid.value);
-  const dispatch = useDispatch();
   return (
-    <div>
-        <button
-          aria-label="Increment value"
-          onClick={() => dispatch(increment())}
-        >
-          Increment</button>
-          <button
-          aria-label="Decrement value"
-          onClick={() => dispatch(decrement())}
-        >
-          Decrement
-        </button>
-        <Canvas>
-          {props.tile_data.map((row, i) => {
-            return <Row className='row' key={i}>
-              {row.map((tile, j) => 
-                <Tile power={tile} key={(i, j)}/>
-              )}
-            </Row>
-          })}
-      </Canvas>
-    </div>
+    <Canvas>
+      {props.tile_data.map((row, i) => {
+        return <Row className='row' key={i}>
+          {row.map((tile, j) => 
+            <Tile power={tile} key={(i, j)}/>
+          )}
+        </Row>
+      })}
+    </Canvas>
   );
 }
 

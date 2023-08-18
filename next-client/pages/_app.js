@@ -43,7 +43,7 @@ export default function App({ Component, pageProps }) {
       <Hydrate state={pageProps.dehydratedState}>
         <WalletProvider
         wallets={wallets}
-        decryptPermission={DecryptPermission.UponRequest}
+        decryptPermission={DecryptPermission.AutoDecrypt}
         network={WalletAdapterNetwork.Testnet}
         autoConnect>
           <WalletModalProvider>
