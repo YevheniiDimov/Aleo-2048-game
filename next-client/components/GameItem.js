@@ -31,7 +31,7 @@ function GameItem(props) {
     return (
         <div className='d-flex flex-column w-100 cursor-pointer hover:bg-sky-700' onClick={selectTile}>
             <Grid tile_data={field} />
-            <h3 className='text-white mt-3 text-lg'>Score: {props.score}</h3>
+            <h3 className='mt-3 text-lg'>Score: {props.score}</h3>
         </div>
     );
 }

@@ -13,6 +13,7 @@
     "@demox-labs/aleo-wallet-adapter-leo": "^0.0.16",
     "@demox-labs/aleo-wallet-adapter-react": "^0.0.16",
     "@demox-labs/aleo-wallet-adapter-reactui": "^0.0.28",
+    "@radix-ui/react-popover": "1.0.6",
     "@reduxjs/toolkit": "^1.9.5",
     "@types/node": "20.5.0",
     "@types/react": "18.2.20",
