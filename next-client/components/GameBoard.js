@@ -31,10 +31,9 @@ function GameBoard(props) {
     const dispatch = useDispatch();
 
     let side = -1;
-    let checkInterval = null;
 
     const makeMove = async () => {
-        let payRecord = await getSpendableRecord(credit_records, 18000000);
+        let payRecord = await getSpendableRecord(credit_records, 26000000);
         console.log('PayRecord Game Board');
         console.log(payRecord);
         if (payRecord) {
@@ -44,6 +43,9 @@ function GameBoard(props) {
         else {
             throw NotEnoughCreditsException('Not enough credits on records');
         }
+        
+        console.log('Selected Game Record:');
+        console.log(selected_game);
 
         const inputs = [selected_game, `${side}u8`];
 
@@ -55,7 +57,7 @@ function GameBoard(props) {
         WalletAdapterNetwork.Testnet,
         'game2048_1elm7z.aleo',
         'move_tiles',
-        inputs, 18000000
+        inputs, 26000000
         );
 
         if (props.transactionCallback) {
