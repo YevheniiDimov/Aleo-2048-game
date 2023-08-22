@@ -577,7 +577,7 @@ program game_2048.aleo {
     // Moves a board to some direction according
     // to the 2048 game logic returning a state
     // with the updated board after movement
-    // Side: 0 - top, 1 - right, 2 - bottom, 3 - left
+    // Side: 0 - top, 1 - right, 2 - bottom, 3 - left 
     transition move(board: board_state, side: u8) -> board_state {
       assert(board.owner == self.caller); // Check if the caller is the state owner
       assert(board.game_state < 2u8); // Check if the game is not finished and has a new tile

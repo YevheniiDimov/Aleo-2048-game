@@ -1,3 +1,7 @@
+// The program input for helloworld/src/main.leo
+[main]
+public a: u32 = 1u32; 
+b: u32 = 2u32; // Input variable `b` is private by default.
 // The program input for game_2048/src/main.leo
 [make_move]
 public side: u8 = 3u8; 
@@ -26,11 +30,11 @@ public tiles: u64 = 8452u64; // 0010 0001 0000 0100
 public board: board_state = board_state {
   owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
   state_address: 84271489382108351405960455610417975257u128,
-  prev_state_address: 334077208248313587605873302454944409727u128,
-  board: 281474976710658u64,
-  score: 281474976710658u64,
-  points: 2u64,
-  move: 10u16,
+  prev_state_address: 0u128,
+  board: 0u64,
+  score: 0u64,
+  points: 0u64,
+  move: 0u16,
   game_state: 2u8,
   _nonce: 3291920506443629527653372857820842263401577823020350463642301889559527742736group
 };
@@ -45,19 +49,31 @@ public row: u64 = 0u64;
 public index: u8 = 1u8;
 public tile: u64 = 3u64;
 
+/* Move Input
+0100 0000 0000 0000
+0000 0000 1000 0000
+0010 0000 0000 0010
+*/
+
+/* Move Output
+0100 0000 0000 0000
+0000 0000 1000 0000
+0010 0000 0000 0010
+*/
+
 [move]
 public board: board_state = board_state {
   owner: aleo1mgfq6g40l6zkhsm063n3uhr43qk5e0zsua5aszeq5080dsvlcvxsn0rrau,
   state_address: 163172131931342317579950458907546582000u128,
   prev_state_address: 84271489382108351405960455610417975257u128,
-  board: 281474976718852u64,
-  score: 281474976710658u64,
+  board: 70368752574466u64,
+  score: 100u64,
   points: 2u64,
   move: 10u16,
   game_state: 1u8,
   _nonce: 7688193700572447588159891267840470153575991213084301090640712606344986863652group
 };
-public side: u8 = 3u8;
+public side: u8 = 1u8;
 
 [get_tiles_left]
 public tiles: u64 = 1u64; // 0001 0001 0010 0010

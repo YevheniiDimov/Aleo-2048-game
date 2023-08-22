@@ -12,6 +12,9 @@
   - [Sequencing the States](#sequencing-the-states)
   - [Preventing Double Moves](#preventing-double-moves)
   - [Multiple Games](#multiple-games)
+  - [Binary Operations and Representation](#binary-operations-and-representation)
+  - [Binary Game Logic](#binary-game-logic)
+  - [Accessing Player Statistics](#accessing-player-statistics)
 
 # Summary
 
@@ -19,6 +22,10 @@
 within the gameboard, so it creates a gravity that merge equal tiles together forming the
 sum of their values and generating a new tile. In order to win this game, a player should
 form the number of 2048 on the board by merging equal squares.
+
+The game uses program built on Leo language, which can be used for transparent and secure high scores 
+or rewards distribution in the future, adding value to the Aleo ecosystem. Also, blockchain's decentralized 
+nature could enhance community involvement and engagement. 
 
 ## How to Build
 
@@ -250,3 +257,70 @@ so it's possible to analyze the player movements and discard the invalid moves.
 
 The program supports the feature of playing multiple games at once, so players can start as many games they
 can and the blockchain can recall them all.
+
+## Binary Operations and Representation
+
+The board is represented as a 64-bit number, as the board is 4x4, that means that each row has
+16 bits, and each row has 4 tiles, where each consecutive tile has 4 bits. In order to optimize
+the game, it was decided to store the powers of 2s instead of game numbers, as the maximum value is
+2048, which requires 16 bits to be represented, and in powers of 2s it's only 11, which takes only 4
+bits, drastically reducing the resources needed for the storage.
+
+Binary Representation
+
+```markdown
+0010 0000 0000 0000
+0000 0000 0000 0000
+0000 0000 1000 0000
+0000 0000 0001 0000
+```
+
+Game Number Representation
+```markdown
+  4   0   0   0
+  0   0   0   0
+  0   0 256   0
+  0   0   1   0
+```
+
+Numbers in different representations
+| Number | Power of 2s | Power of 2s Binary |
+|--------|-------------|--------------------|
+| 2      | 1           | 0001               |
+| 4      | 2           | 0010               |
+| 8      | 3           | 0011               |
+| 16     | 4           | 0100               |
+| 32     | 5           | 0101               |
+| 64     | 6           | 0110               |
+| 128    | 7           | 0111               |
+| 256    | 8           | 1000               |
+| 512    | 9           | 1001               |
+| 1024   | 10          | 1010               |
+| 2048   | 11          | 1011               |
+
+
+## Binary Game Logic
+
+The game implementation uses binary operations such as summation, AND operation, left and right shifts,
+and applying binary masks, for instance, in order to fetch the bottom row, I should apply
+the mask of 65535, which is 0000000000000000000000000000000000000000000000001111111111111111
+so when I apply AND operation with this mask, it will leave only least 16 bits the same, and turn
+everything else into 0, so if I have the top row, I apply the shift of 48 to the right, as there are
+48 bits before last 16. These operations are computationaly light and allow more efficient memory and
+CPU utilization.
+## Accessing Player Statistics
+
+Also there is a player statistics that consists of three different values:
+```markdown
+Games Played (games_played)   count of games a player has started
+Games Won (games_won)   count of games a player finished by winning
+Max Score (max_score)   the highest player record in the game
+```
+
+It can be accessed through Aleo API, for instance using this URL:
+```markdown
+https://vm.aleo.org/api/testnet3/program/game2048_1elm7z.aleo/mapping/players/{PLAYER_ADDRESS}
+```
+
+Where there should be a player's address instead of {PLAYER_ADDRESS} without curly brackets 
+to get the game of a particular player. It won't work without player starting any game.
