@@ -15,6 +15,7 @@
   - [Binary Operations and Representation](#binary-operations-and-representation)
   - [Binary Game Logic](#binary-game-logic)
   - [Accessing Player Statistics](#accessing-player-statistics)
+  - [Discord: dwalker\_mnv](#discord-dwalker_mnv)
 
 # Summary
 
@@ -324,3 +325,7 @@ https://vm.aleo.org/api/testnet3/program/game2048_1elm7z.aleo/mapping/players/{P
 
 Where there should be a player's address instead of {PLAYER_ADDRESS} without curly brackets 
 to get the game of a particular player. It won't work without player starting any game.
+
+----
+
+## Discord: dwalker_mnv
